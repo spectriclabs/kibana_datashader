@@ -1,0 +1,7 @@
+{
+  "prefix": "mapDatashader",
+  "paths": {
+    "mapDatashader": "."
+  },
+  "translations": ["translations/ja-JP.json"]
+}
