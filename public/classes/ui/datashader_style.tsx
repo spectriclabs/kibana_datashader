@@ -1011,7 +1011,7 @@ export class DatashaderStyleEditor extends Component<Props, State> {
       indexPatternId: _.get(this.state.indexPattern, 'id', ''),
       geoField: this.state.geoField
     } as Partial<CustomRasterSourceDescriptor>);
-    
+
     if (this.state.geoField && this.state.geoField.length === 0) {
       //const defaultGeospatialField = this.props.settings.defaultGeospatialField;
       const defaultGeospatialField = "geo_center";
@@ -1028,6 +1028,7 @@ export class DatashaderStyleEditor extends Component<Props, State> {
     }
   }
   onGeoFieldSelect = (geoField: string | undefined) => {
+
     this.setState(
       {
         geoField: geoField || '',
@@ -1056,6 +1057,7 @@ export class DatashaderStyleEditor extends Component<Props, State> {
     );
   };
   render() {
+    let geofield = this.state.geoFields.find(g=>g.spec.name === this.state.geoField)
     return (
       <Fragment>
 
@@ -1075,6 +1077,8 @@ export class DatashaderStyleEditor extends Component<Props, State> {
           onChange={(name: string | undefined) => this.onGeoFieldSelect(name)}
         />
         {this._renderColorStyleConfiguration()}
+
+        {geofield && geofield.type === "geo_shape"?<div>We have Polygons</div>:null}
         <EuiHorizontalRule margin="xs" />
         {this._renderStyleConfiguration()}
       </Fragment>

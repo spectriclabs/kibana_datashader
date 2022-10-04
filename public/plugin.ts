@@ -5,18 +5,23 @@
  * 2.0.
  */
 
-import { CoreSetup, CoreStart, Plugin } from '@kbn/core/public';
+import { CoreSetup, CoreStart, Plugin, PluginInitializerContext } from '@kbn/core/public';
 import { MapsCustomRasterSourcePluginSetup, MapsCustomRasterSourcePluginStart } from './types';
 import { CustomRasterSource } from './classes/custom_raster_source';
 import { customRasterLayerWizard } from './classes/custom_raster_layer_wizard';
 import { PLUGIN_ID, PLUGIN_NAME } from '../common';
-import { setStartServices } from './kibana_services';
-
+import { setStartServices,setConfig } from './kibana_services';
+import type { DataShaderConfig } from '../config';
 
 export class MapsCustomRasterSourcePlugin
   implements
     Plugin<void, void, MapsCustomRasterSourcePluginSetup, MapsCustomRasterSourcePluginStart>
 {
+  readonly _initializerContext: PluginInitializerContext<DataShaderConfig>;
+  constructor(initializerContext: PluginInitializerContext<DataShaderConfig>) {
+    this._initializerContext = initializerContext;
+  }
+
   public setup(
     core: CoreSetup<MapsCustomRasterSourcePluginStart>,
     {  maps: mapsSetup }: MapsCustomRasterSourcePluginSetup
@@ -51,6 +56,8 @@ export class MapsCustomRasterSourcePlugin
 
 
   public start(core: CoreStart, plugins: MapsCustomRasterSourcePluginStart): void {
+    const mapConfig = this._initializerContext.config.get<DataShaderConfig>();
+    setConfig(mapConfig);
     setStartServices(core, plugins);
   }
   public stop() {}

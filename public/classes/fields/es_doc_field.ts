@@ -12,29 +12,35 @@ import type {
   AggregationsPercentilesAggregation,
   AggregationsTermsAggregation,
 } from '@elastic/elasticsearch/lib/api/typesWithBodyKey';
-import { FIELD_ORIGIN } from '../../../common/constants';
-import { ESTooltipProperty } from '../tooltips/es_tooltip_property';
-import { ITooltipProperty, TooltipProperty } from '../tooltips/tooltip_property';
-import { IField, AbstractField } from './field';
-import { IESSource } from '../sources/es_source';
-import { IVectorSource } from '../sources/vector_source';
+import {FIELD_ORIGIN } from '@kbn/maps-plugin/common';
 
+
+import {  AbstractField, TooltipProperty } from './field';
+//import { IESSource } from '../sources/es_source';
+
+import type {
+  IField,
+  ITooltipProperty,
+} from '@kbn/maps-plugin/public';
+import { ICustomRasterSource } from '../custom_raster_source';
+//import { ESTooltipProperty } from '@kbn/maps-plugin/public/classes/tooltips/es_tooltip_property';
 export class ESDocField extends AbstractField implements IField {
-  private readonly _source: IESSource;
-
+  private __source: ICustomRasterSource;
   constructor({
     fieldName,
     source,
     origin,
   }: {
     fieldName: string;
-    source: IESSource;
+    source: ICustomRasterSource;
     origin: FIELD_ORIGIN;
   }) {
-    super({ fieldName, origin });
-    this._source = source;
+    super({ fieldName, origin,source });
+    this.__source = source
   }
-
+  getSource(): ICustomRasterSource {
+    return this.__source
+  }
   supportsFieldMetaFromEs(): boolean {
     return true;
   }
@@ -48,12 +54,11 @@ export class ESDocField extends AbstractField implements IField {
     return true;
   }
 
-  getSource(): IVectorSource {
-    return this._source;
-  }
+
 
   async _getIndexPatternField(): Promise<DataViewField | undefined> {
-    const indexPattern = await this._source.getIndexPattern();
+    const source = this.getSource()
+    const indexPattern = await source.getIndexPattern();
     const indexPatternField = indexPattern.fields.getByName(this.getName());
     return indexPatternField && indexPatterns.isNestedField(indexPatternField)
       ? undefined
@@ -61,14 +66,10 @@ export class ESDocField extends AbstractField implements IField {
   }
 
   async createTooltipProperty(value: string | string[] | undefined): Promise<ITooltipProperty> {
-    const indexPattern = await this._source.getIndexPattern();
+   // const source = this.getSource()
+    //const indexPattern = await source.getIndexPattern();
     const tooltipProperty = new TooltipProperty(this.getName(), await this.getLabel(), value);
-    return new ESTooltipProperty(
-      tooltipProperty,
-      indexPattern,
-      this as IField,
-      this._source.getApplyGlobalQuery()
-    );
+    return tooltipProperty
   }
 
   async getDataType(): Promise<string> {

@@ -50,8 +50,32 @@ import { AbstractField } from './fields/field';
 import _ from 'lodash';
 import { RasterTileSource } from 'maplibre-gl';
 import { GeoJsonProperties, Geometry, Position } from 'geojson';
+import { RasterTileSourceData } from '@kbn/maps-plugin/public/classes/sources/tms_source';
 const NUMBER_DATA_TYPES = [ "number" ]
 export const CATEGORICAL_DATA_TYPES = ['string', 'ip', 'boolean'];
+
+
+const urlRe = /^(\w+):\/\/([^/?]*)(\/[^?]+)?\??(.+)?/;
+
+function parseUrl(url: string) {
+    const parts = url.match(urlRe);
+    if (!parts) {
+        throw new Error(`Unable to parse URL "${url}"`);
+    }
+    let paramParts =  parts[4] ? parts[4].split('&') : []
+    let params:any = {}
+    paramParts.forEach(p=>{
+      let [key,value] = p.split("=");
+      params[key] = decodeURIComponent(value)
+    })
+    return {
+        protocol: parts[1],
+        authority: parts[2],
+        path: parts[3] || '/',
+        params: params
+    };
+}
+
 export type CustomRasterSourceDescriptor = AbstractESSourceDescriptor & {
   urlTemplate: string,
   indexTitle: string,
@@ -92,11 +116,16 @@ var defaultStyle = {
   [DATASHADER_STYLES.ELLIPSE_THICKNESS]: 0,
   [DATASHADER_STYLES.MANUAL_RESOLUTION]: false,
 } as DatashaderStylePropertiesDescriptor
-export class CustomRasterSource  implements IVectorSource {
+export interface ICustomRasterSource extends IVectorSource {
+  getIndexPattern(): Promise<DataView>;
+}
+
+export class CustomRasterSource  implements ICustomRasterSource {
   static type = "CUSTOM_RASTER";
 
   readonly _descriptor: CustomRasterSourceDescriptor;
   indexPattern: any;
+  _previousSource: any;
   static createDescriptor(settings:DatashaderSourceConfig): CustomRasterSourceDescriptor {
     return {
       urlTemplate: settings.urlTemplate,
@@ -114,10 +143,27 @@ export class CustomRasterSource  implements IVectorSource {
   constructor(sourceDescriptor: CustomRasterSourceDescriptor) {
     this._descriptor = sourceDescriptor;
   }
-  isSourceStale(mbSource: RasterTileSource, sourceData: object): boolean {
+  isSourceStale(mbSource: RasterTileSource, sourceData: RasterTileSourceData): boolean {
     //TODO calculate if the layer needs to be removed and refreshed color changed or ellipses turned on 
-
-    return false 
+    if(!mbSource.tiles || mbSource.tiles[0] == ''){
+      this._previousSource = sourceData.url
+      return true
+    }
+    const unhashedParams = ['zoom','extent']
+    try {
+    const pastParams = parseUrl(mbSource.tiles[0]).params
+      pastParams.params = JSON.parse(pastParams.params)
+      const newParams = parseUrl(sourceData.url).params
+      newParams.params = JSON.parse(newParams.params)
+      unhashedParams.forEach(p=>{
+        delete pastParams.params[p]
+        delete newParams.params[p]
+      })
+      this._previousSource = sourceData.url
+      return JSON.stringify(pastParams) !== JSON.stringify(newParams);
+    } catch (error) {
+     return true; //url didn't parse correctly and needs to be refreshed 
+    }
   }
 
   cloneDescriptor(): CustomRasterSourceDescriptor {
