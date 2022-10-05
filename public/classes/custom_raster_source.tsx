@@ -50,7 +50,7 @@ import { AbstractField } from './fields/field';
 import _ from 'lodash';
 import { RasterTileSource } from 'maplibre-gl';
 import { GeoJsonProperties, Geometry, Position } from 'geojson';
-import { RasterTileSourceData } from '@kbn/maps-plugin/public/classes/sources/tms_source';
+import { RasterTileSourceData } from '@kbn/maps-plugin/public/classes/sources/raster_source';
 const NUMBER_DATA_TYPES = [ "number" ]
 export const CATEGORICAL_DATA_TYPES = ['string', 'ip', 'boolean'];
 
