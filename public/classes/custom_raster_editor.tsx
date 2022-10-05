@@ -22,7 +22,7 @@ export class CustomRasterEditor extends Component<RenderWizardArguments> {
       id: htmlIdGenerator()(),
       type: LAYER_TYPE.RASTER_TILE,
       sourceDescriptor: CustomRasterSource.createDescriptor({
-        urlTemplate:config.url,//TODO check we can get the datashader server to start by kibana and we know the default url and default port
+        urlTemplate:config.url,
       } as DatashaderSourceConfig),
       style: {
         type: 'RASTER',
