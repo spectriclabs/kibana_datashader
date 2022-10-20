@@ -22,23 +22,23 @@ import type {
   IField,
   ITooltipProperty,
 } from '@kbn/maps-plugin/public';
-import { ICustomRasterSource } from '../custom_raster_source';
+import { IDataShaderSource } from '../data_shader_source';
 //import { ESTooltipProperty } from '@kbn/maps-plugin/public/classes/tooltips/es_tooltip_property';
 export class ESDocField extends AbstractField implements IField {
-  private __source: ICustomRasterSource;
+  private __source: IDataShaderSource;
   constructor({
     fieldName,
     source,
     origin,
   }: {
     fieldName: string;
-    source: ICustomRasterSource;
+    source: IDataShaderSource;
     origin: FIELD_ORIGIN;
   }) {
     super({ fieldName, origin,source });
     this.__source = source
   }
-  getSource(): ICustomRasterSource {
+  getSource(): IDataShaderSource {
     return this.__source
   }
   supportsFieldMetaFromEs(): boolean {

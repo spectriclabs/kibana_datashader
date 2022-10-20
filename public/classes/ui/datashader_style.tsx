@@ -11,7 +11,7 @@ import {DatashaderUrlEditorField} from "./datashader_url_editor_field";
 import {  getIndexPatternService } from '../../kibana_services';
 import { SingleFieldSelect } from './single_field_select';
 import { IField } from '@kbn/maps-plugin/public/classes/fields/field';
-import {CustomRasterSourceDescriptor} from "../custom_raster_source"
+import {DataShaderSourceDescriptor} from "../data_shader_source"
 import { indexPatterns } from '@kbn/data-plugin/public';
 import { DataViewField,DataView } from '@kbn/data-views-plugin/common';
 import {
@@ -20,7 +20,7 @@ import {
 
 
 
-import { CustomRasterSource } from '../custom_raster_source';
+import { DataShaderSource } from '../data_shader_source';
 import { i18n } from '@kbn/i18n';
 import { IndexPattern } from '@elastic/elasticsearch/lib/api/types';
 import { DatashaderGeoIndexEditorField } from './datashader_geo_index_editor_field';
@@ -393,9 +393,9 @@ interface FieldMeta {
 }
 
 interface Props {
-  handlePropertyChange: (settings: Partial<CustomRasterSourceDescriptor>) => void;
-  layer: CustomRasterSource;
-  properties: CustomRasterSourceDescriptor;
+  handlePropertyChange: (settings: Partial<DataShaderSourceDescriptor>) => void;
+  layer: DataShaderSource;
+  properties: DataShaderSourceDescriptor;
 }
 
 interface State {
@@ -1010,7 +1010,7 @@ export class DatashaderStyleEditor extends Component<Props, State> {
       timeFieldName: _.get(this.state.indexPattern, 'timeFieldName', ''),
       indexPatternId: _.get(this.state.indexPattern, 'id', ''),
       geoField: this.state.geoField
-    } as Partial<CustomRasterSourceDescriptor>);
+    } as Partial<DataShaderSourceDescriptor>);
 
     if (this.state.geoField && this.state.geoField.length === 0) {
       //const defaultGeospatialField = this.props.settings.defaultGeospatialField;
@@ -1039,7 +1039,7 @@ export class DatashaderStyleEditor extends Component<Props, State> {
         timeFieldName: _.get(this.state.indexPattern, 'timeFieldName', ''),
         indexPatternId: _.get(this.state.indexPattern, 'id', ''),
         geoField: geoField,
-      } as Partial<CustomRasterSourceDescriptor>)
+      } as Partial<DataShaderSourceDescriptor>)
     );
   };
   _onGeoIndexPatternSelect = (indexPattern: IndexPattern) => {

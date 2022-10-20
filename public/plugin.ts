@@ -7,7 +7,7 @@
 
 import { CoreSetup, CoreStart, Plugin, PluginInitializerContext } from '@kbn/core/public';
 import { MapsCustomRasterSourcePluginSetup, MapsCustomRasterSourcePluginStart } from './types';
-import { CustomRasterSource } from './classes/custom_raster_source';
+import { DataShaderSource } from './classes/data_shader_source';
 import { customRasterLayerWizard } from './classes/custom_raster_layer_wizard';
 import { PLUGIN_ID, PLUGIN_NAME } from '../common';
 import { setStartServices,setConfig } from './kibana_services';
@@ -28,8 +28,8 @@ export class MapsCustomRasterSourcePlugin
   ) {
     // Register the Custom raster layer wizard with the Maps application
     mapsSetup.registerSource({
-      type: CustomRasterSource.type,
-      ConstructorFunction: CustomRasterSource,
+      type: DataShaderSource.type,
+      ConstructorFunction: DataShaderSource,
     });
     mapsSetup.registerLayerWizard(customRasterLayerWizard);
 

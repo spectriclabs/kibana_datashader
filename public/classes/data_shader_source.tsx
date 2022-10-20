@@ -51,9 +51,10 @@ import _ from 'lodash';
 import { RasterTileSource } from 'maplibre-gl';
 import { GeoJsonProperties, Geometry, Position } from 'geojson';
 import { RasterTileSourceData } from '@kbn/maps-plugin/public/classes/sources/raster_source';
+import { DatashaderLegend } from './ui/datashader_legend';
 const NUMBER_DATA_TYPES = [ "number" ]
 export const CATEGORICAL_DATA_TYPES = ['string', 'ip', 'boolean'];
-
+import { DATASHADER_BUCKET_SELECT } from "./ui/datashader_legend";
 
 const urlRe = /^(\w+):\/\/([^/?]*)(\/[^?]+)?\??(.+)?/;
 
@@ -76,7 +77,7 @@ function parseUrl(url: string) {
     };
 }
 
-export type CustomRasterSourceDescriptor = AbstractESSourceDescriptor & {
+export type DataShaderSourceDescriptor = AbstractESSourceDescriptor & {
   urlTemplate: string,
   indexTitle: string,
   timeFieldName: string,
@@ -116,34 +117,63 @@ var defaultStyle = {
   [DATASHADER_STYLES.ELLIPSE_THICKNESS]: 0,
   [DATASHADER_STYLES.MANUAL_RESOLUTION]: false,
 } as DatashaderStylePropertiesDescriptor
-export interface ICustomRasterSource extends IVectorSource {
+export interface IDataShaderSource extends IVectorSource {
   getIndexPattern(): Promise<DataView>;
+  getStyleUrlParams(data:any):string;
+  getMap(): any |undefined;
 }
+var DATASHADER_ID = 1;
+export class DataShaderSource  implements IDataShaderSource {
+  static type = "DATA_SHADER";
 
-export class CustomRasterSource  implements ICustomRasterSource {
-  static type = "CUSTOM_RASTER";
-
-  readonly _descriptor: CustomRasterSourceDescriptor;
+  readonly _descriptor: DataShaderSourceDescriptor;
   indexPattern: any;
   _previousSource: any;
-  static createDescriptor(settings:DatashaderSourceConfig): CustomRasterSourceDescriptor {
+  currentDataFilter: DataFilters | undefined;
+  map: any | undefined;
+  static createDescriptor(settings:DatashaderSourceConfig): DataShaderSourceDescriptor {
+    console.log("HERE!!!")
     return {
+      id:`DataShader-${DATASHADER_ID++}`,
       urlTemplate: settings.urlTemplate,
       indexTitle: settings.indexTitle,
       timeFieldName: settings.timeFieldName,
-      type: CustomRasterSource.type,
+      type: DataShaderSource.type,
       indexPatternId: settings.indexPatternId,
       geoField: settings.geoField,
       applyGlobalQuery: settings.applyGlobalQuery,
       applyGlobalTime: settings.applyGlobalTime, 
       ...defaultStyle
-    } as CustomRasterSourceDescriptor
+    } as DataShaderSourceDescriptor
   }
 
-  constructor(sourceDescriptor: CustomRasterSourceDescriptor) {
+  constructor(sourceDescriptor: DataShaderSourceDescriptor) {
     this._descriptor = sourceDescriptor;
   }
+  getMap() {
+    return this.map;
+  }
+  async hasLegendDetails(): Promise<boolean> {
+    return true;
+  }
+
+  renderLegendDetails(dataRequest:DataRequest): ReactElement<any> | null {
+    if(!dataRequest){
+      console.log(dataRequest)
+      return null
+    }
+    return       (<DatashaderLegend
+    sourceDescriptorUrlTemplate={this._descriptor.urlTemplate}
+    sourceDescriptorIndexTitle={this._descriptor.indexTitle}
+    styleDescriptorCategoryField={this._descriptor.categoryField}
+    style={this}
+    sourceDataRequest={dataRequest}
+
+  />)
+  }
+
   isSourceStale(mbSource: RasterTileSource, sourceData: RasterTileSourceData): boolean {
+    this.map = mbSource.map;
     //TODO calculate if the layer needs to be removed and refreshed color changed or ellipses turned on 
     if(!mbSource.tiles || mbSource.tiles[0] == ''){
       this._previousSource = sourceData.url
@@ -166,7 +196,7 @@ export class CustomRasterSource  implements ICustomRasterSource {
     }
   }
 
-  cloneDescriptor(): CustomRasterSourceDescriptor {
+  cloneDescriptor(): DataShaderSourceDescriptor {
     return {
       ...this._descriptor,
     };
@@ -480,11 +510,17 @@ return new AbstractField({
   }
 
   getUpdateDueToTimeslice(prevMeta: DataRequestMeta, timeslice?: Timeslice): boolean {
-    return true;
+    return false;
   }
   getStyleUrlParams(data: any) {
     let urlParams = "";
+    //Check to see if the legend changed any params. (kinda a hacky way to do this but the layer descriptor cannot be changed unless editing)
+    var bucket_select = DATASHADER_BUCKET_SELECT[this._descriptor.id]
+    if(!bucket_select){
+      bucket_select = [0,100] //use the full range if not specified
+    }
 
+    let [bucket_min, bucket_max] = bucket_select;
     // the current implementation of auto is too slow, so remove it
     let span = data.spanRange;
     //if (span === "auto") {
@@ -493,6 +529,8 @@ return new AbstractField({
 
     urlParams = urlParams.concat(
         "&span=", span,
+        "&bucket_min=",bucket_min,
+        "&bucket_max=",bucket_max
     )
 
     if (data.showEllipses &&
@@ -558,6 +596,7 @@ return new AbstractField({
   }
   async getUrlTemplate(dataFilters:DataFilters): Promise<string> {
     try {
+      this.currentDataFilter = dataFilters;
     let data = {...dataFilters,...this._descriptor}
     console.log(dataFilters)
     console.log(this._descriptor)
