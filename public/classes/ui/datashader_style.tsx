@@ -22,7 +22,6 @@ import {
 
 import { DataShaderSource } from '../data_shader_source';
 import { i18n } from '@kbn/i18n';
-import { IndexPattern } from '@elastic/elasticsearch/lib/api/types';
 import { DatashaderGeoIndexEditorField } from './datashader_geo_index_editor_field';
 import { DatashaderGeoFieldEditorField } from './datashader_geo_field_editor_field';
 import { ES_GEO_FIELD_TYPE } from './geo_index_pattern_select';
@@ -41,6 +40,8 @@ export const DATASHADER_COLOR_KEY_LABEL = i18n.translate('xpack.maps.heatmap.col
 });
 
 export enum DATASHADER_STYLES {
+    TIME_OVERLAP = "timeOverlap",
+    TIME_OVERLAP_SIZE = "timeOverlapSize",
     COLOR_RAMP_NAME = 'colorRampName',
     COLOR_KEY_NAME = 'colorKeyName',
     SPREAD = 'spread',
@@ -72,6 +73,8 @@ export type DatashaderStylePropertiesDescriptor = {
     [DATASHADER_STYLES.CATEGORY_FIELD_TYPE]: string | null;
     [DATASHADER_STYLES.CATEGORY_FIELD_PATTERN]: string | null;
     [DATASHADER_STYLES.SHOW_ELLIPSES]: boolean;
+    [DATASHADER_STYLES.TIME_OVERLAP]: boolean;
+    [DATASHADER_STYLES.TIME_OVERLAP_SIZE]: string;
     [DATASHADER_STYLES.USE_HISTOGRAM]: boolean | undefined;
     [DATASHADER_STYLES.ELLIPSE_MAJOR_FIELD]: string;
     [DATASHADER_STYLES.ELLIPSE_MINOR_FIELD]: string;
@@ -597,6 +600,17 @@ export class DatashaderStyleEditor extends Component<Props, State> {
     );
   };
 
+  onUseTimeOverlapChanged(event: EuiSwitchEvent) {
+    this.props.handlePropertyChange(
+      { [DATASHADER_STYLES.TIME_OVERLAP]: event.target.checked }
+    );
+  };
+
+  onUseTimeOverlapSizeChanged(event: ChangeEvent<HTMLSelectElement>) {
+    this.props.handlePropertyChange(
+      { [DATASHADER_STYLES.TIME_OVERLAP_SIZE]: event.target.value }
+    );
+  };
   onUseHistogramChanged(event: EuiSwitchEvent) {
     this.props.handlePropertyChange(
       { [DATASHADER_STYLES.USE_HISTOGRAM]: event.target.checked }
@@ -1042,7 +1056,7 @@ export class DatashaderStyleEditor extends Component<Props, State> {
       } as Partial<DataShaderSourceDescriptor>)
     );
   };
-  _onGeoIndexPatternSelect = (indexPattern: IndexPattern) => {
+  _onGeoIndexPatternSelect = (indexPattern: DataView) => {
     this.setState(
       {
         isLoadingIndexPattern: true,
@@ -1056,6 +1070,65 @@ export class DatashaderStyleEditor extends Component<Props, State> {
       this._loadIndexPattern
     );
   };
+  _renderTimeOverlapSelection(){
+    let geofield = this.state.geoFields.find(g=>g.spec.name === this.state.geoField)
+    if(!geofield || geofield.type !== "geo_shape"){
+      return null
+    }
+    const timeOverlapOptions = [
+      {
+        value: "auto",
+        text: "Auto"
+      },
+      {
+        value: "1y",
+        text: "Year"
+      },
+      {
+        value: "1M",
+        text: "Month"
+      },
+      {
+        value: "1d",
+        text: "Day"
+      },
+      {
+        value: "1h",
+        text: "Hour"
+      },
+      {
+        value: "1m",
+        text: "Minute"
+      }
+    ];
+    return (
+    <div>
+      <EuiFormRow
+        label={'Use Time Overlap'}
+        display="columnCompressed"
+      >
+        <EuiSwitch
+          label={'Time Overlap'}
+          checked={this.props.properties.timeOverlap}
+          onChange={(e)=>this.onUseTimeOverlapChanged(e)}
+          compressed
+        />
+      </EuiFormRow>
+      {this.props.properties.timeOverlap?
+      <EuiFormRow
+        label={'Time Overlap Size'}
+        display="columnCompressed"
+      >
+        <EuiSelect
+          options={timeOverlapOptions}
+          value={this.props.properties.timeOverlapSize}
+          onChange={(e)=>this.onUseTimeOverlapSizeChanged(e)}
+        />
+      </EuiFormRow>
+      :null}
+    </div>)
+    
+  }
   render() {
     let geofield = this.state.geoFields.find(g=>g.spec.name === this.state.geoField)
     return (
@@ -1076,9 +1149,10 @@ export class DatashaderStyleEditor extends Component<Props, State> {
           indexPatternDefined={this.state.indexPatternId !== undefined}
           onChange={(name: string | undefined) => this.onGeoFieldSelect(name)}
         />
+        {this._renderTimeOverlapSelection()}
         {this._renderColorStyleConfiguration()}
 
-        {geofield && geofield.type === "geo_shape"?<div>We have Polygons</div>:null}
+        
         <EuiHorizontalRule margin="xs" />
         {this._renderStyleConfiguration()}
       </Fragment>

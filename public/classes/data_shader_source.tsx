@@ -98,6 +98,8 @@ export type DatashaderSourceConfig = {
 } 
 
 var defaultStyle = {
+  [DATASHADER_STYLES.TIME_OVERLAP]:false,
+  [DATASHADER_STYLES.TIME_OVERLAP_SIZE]:"auto",
   [DATASHADER_STYLES.COLOR_RAMP_NAME]: "bmy",
   [DATASHADER_STYLES.COLOR_KEY_NAME]: "glasbey_light",
   [DATASHADER_STYLES.SPREAD]: "auto",
@@ -119,7 +121,7 @@ var defaultStyle = {
 } as DatashaderStylePropertiesDescriptor
 export interface IDataShaderSource extends IVectorSource {
   getIndexPattern(): Promise<DataView>;
-  getStyleUrlParams(data:any):string;
+  getStyleUrlParams(data:DatashaderStylePropertiesDescriptor):string;
   getMap(): any |undefined;
 }
 var DATASHADER_ID = 1;
@@ -192,6 +194,9 @@ export class DataShaderSource  implements IDataShaderSource {
       this._previousSource = sourceData.url
       return JSON.stringify(pastParams) !== JSON.stringify(newParams);
     } catch (error) {
+      if(mbSource.tiles && mbSource.tiles[0] === sourceData.url){
+        return false; //if we are still loading and are using a dataurl
+      }
      return true; //url didn't parse correctly and needs to be refreshed 
     }
   }
@@ -512,7 +517,7 @@ return new AbstractField({
   getUpdateDueToTimeslice(prevMeta: DataRequestMeta, timeslice?: Timeslice): boolean {
     return false;
   }
-  getStyleUrlParams(data: any) {
+  getStyleUrlParams(data: DatashaderStylePropertiesDescriptor) {
     let urlParams = "";
     //Check to see if the legend changed any params. (kinda a hacky way to do this but the layer descriptor cannot be changed unless editing)
     var bucket_select = DATASHADER_BUCKET_SELECT[this._descriptor.id]
@@ -545,11 +550,15 @@ return new AbstractField({
         "&ellipse_units=", data.ellipseUnits,
         "&ellipse_search=", data.ellipseSearchDistance,
         "&spread=", data.ellipseThickness.toString(),
+        "&timeOverlap=",data.timeOverlap.toString(),
+        "&timeOverlapSize=",data.timeOverlapSize
       );
     } else {
       urlParams = urlParams.concat(
         "&spread=", data.spread,
-        "&resolution=", data.gridResolution
+        "&resolution=", data.gridResolution,
+        "&timeOverlap=",data.timeOverlap.toString(),
+        "&timeOverlapSize=",data.timeOverlapSize
       )
     }
 
