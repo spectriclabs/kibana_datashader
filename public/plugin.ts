@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import { CoreSetup, CoreStart, Plugin, PluginInitializerContext } from '@kbn/core/public';
+import { AppNavLinkStatus, CoreSetup, CoreStart, Plugin, PluginInitializerContext } from '@kbn/core/public';
 import { MapsCustomRasterSourcePluginSetup, MapsCustomRasterSourcePluginStart } from './types';
 import { DataShaderSource } from './classes/data_shader_source';
 import { customRasterLayerWizard } from './classes/custom_raster_layer_wizard';
@@ -37,6 +37,7 @@ export class MapsCustomRasterSourcePlugin
     core.application.register({
       id: PLUGIN_ID,
       title: PLUGIN_NAME,
+      navLinkStatus:AppNavLinkStatus.hidden,
       mount: ({ history }) => {
         (async () => {
           const [coreStart] = await core.getStartServices();
