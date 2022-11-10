@@ -1147,7 +1147,6 @@ export class DatashaderStyleEditor extends Component<Props, State> {
     
   }
   render() {
-    let geofield = this.state.geoFields.find(g=>g.spec.name === this.state.geoField)
     return (
       <Fragment>
 
