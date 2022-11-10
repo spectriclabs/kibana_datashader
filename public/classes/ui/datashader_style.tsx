@@ -8,7 +8,7 @@ import _ from 'lodash';
 import React, { ChangeEvent, Component, Fragment } from 'react';
 import { EuiFormRow, EuiSuperSelect, EuiSelect, EuiSwitch, EuiSwitchEvent, EuiHorizontalRule } from '@elastic/eui';
 import {DatashaderUrlEditorField} from "./datashader_url_editor_field";
-import {  getIndexPatternService } from '../../kibana_services';
+import {  getIndexPatternService,getTimeFilter } from '../../kibana_services';
 import { SingleFieldSelect } from './single_field_select';
 import { IField } from '@kbn/maps-plugin/public/classes/fields/field';
 import {DataShaderSourceDescriptor} from "../data_shader_source"
@@ -1075,10 +1075,19 @@ export class DatashaderStyleEditor extends Component<Props, State> {
     if(!geofield || geofield.type !== "geo_shape"){
       return null
     }
+    let timeSpan = getTimeFilter().getAbsoluteTime()
+    //Calculate the auto duration in minutes
+    let start = new Date(timeSpan.from);
+    let stop = new Date(timeSpan.to);
+    let minutes = (stop.getTime() - start.getTime())/1000/60;
+    let step = 1;
+    while(minutes/step >546){
+      step += 1
+    }
     const timeOverlapOptions = [
       {
         value: "auto",
-        text: "Auto"
+        text: `Auto (${step} Minutes)`
       },
       {
         value: "1y",

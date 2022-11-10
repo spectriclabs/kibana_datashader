@@ -6,6 +6,7 @@ import type { MapsCustomRasterSourcePluginStart } from './types';
 let coreStart: CoreStart;
 let pluginsStart: MapsCustomRasterSourcePluginStart;
 let config: DataShaderConfig;
+export const getTimeFilter = () => pluginsStart.data.query.timefilter.timefilter;
 export function setStartServices(core: CoreStart, plugins: MapsCustomRasterSourcePluginStart) {
   coreStart = core;
   pluginsStart = plugins;
