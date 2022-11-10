@@ -1125,21 +1125,23 @@ export class DatashaderStyleEditor extends Component<Props, State> {
       </EuiFormRow>
 
       {this.props.properties.timeOverlap?
-        <EuiCallOut title={"Search Overload"} color="warning" iconType="help">
-        <p>
-          Using Time Overlap Size setting other than auto can cause Elasticsearch to break if the total search time ranges aren't reasonably small. Utilize specific settings only if you and your users know what they are doing.
-        </p>
-      </EuiCallOut>
-      <EuiFormRow
-        label={'Time Overlap Size'}
-        display="columnCompressed"
-      >
-        <EuiSelect
-          options={timeOverlapOptions}
-          value={this.props.properties.timeOverlapSize}
-          onChange={(e)=>this.onUseTimeOverlapSizeChanged(e)}
-        />
-      </EuiFormRow>
+      <Fragment>
+          <EuiCallOut title={"Search Overload"} color="warning" iconType="help">
+          <p>
+            Using Time Overlap Size setting other than auto can cause Elasticsearch to break if the total search time ranges aren't reasonably small. Utilize specific settings only if you and your users know what they are doing.
+          </p>
+        </EuiCallOut>
+        <EuiFormRow
+          label={'Time Overlap Size'}
+          display="columnCompressed"
+        >
+          <EuiSelect
+            options={timeOverlapOptions}
+            value={this.props.properties.timeOverlapSize}
+            onChange={(e)=>this.onUseTimeOverlapSizeChanged(e)}
+          />
+        </EuiFormRow>
+      </Fragment>
       :null}
     </div>)
     
