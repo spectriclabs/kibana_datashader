@@ -6,7 +6,7 @@
 
 import _ from 'lodash';
 import React, { ChangeEvent, Component, Fragment } from 'react';
-import { EuiFormRow, EuiSuperSelect, EuiSelect, EuiSwitch, EuiSwitchEvent, EuiHorizontalRule } from '@elastic/eui';
+import { EuiFormRow, EuiSuperSelect, EuiSelect, EuiSwitch, EuiSwitchEvent, EuiHorizontalRule, EuiCallOut } from '@elastic/eui';
 import {DatashaderUrlEditorField} from "./datashader_url_editor_field";
 import {  getIndexPatternService,getTimeFilter } from '../../kibana_services';
 import { SingleFieldSelect } from './single_field_select';
@@ -1123,7 +1123,13 @@ export class DatashaderStyleEditor extends Component<Props, State> {
           compressed
         />
       </EuiFormRow>
+
       {this.props.properties.timeOverlap?
+        <EuiCallOut title={"Search Overload"} color="warning" iconType="help">
+        <p>
+          Using Time Overlap Size setting other than auto can cause Elasticsearch to break if the total search time ranges aren't reasonably small. Utilize specific settings only if you and your users know what they are doing.
+        </p>
+      </EuiCallOut>
       <EuiFormRow
         label={'Time Overlap Size'}
         display="columnCompressed"
