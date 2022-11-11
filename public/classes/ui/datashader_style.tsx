@@ -10,13 +10,10 @@ import { EuiFormRow, EuiSuperSelect, EuiSelect, EuiSwitch, EuiSwitchEvent, EuiHo
 import {DatashaderUrlEditorField} from "./datashader_url_editor_field";
 import {  getIndexPatternService,getTimeFilter } from '../../kibana_services';
 import { SingleFieldSelect } from './single_field_select';
-import { IField } from '@kbn/maps-plugin/public/classes/fields/field';
 import {DataShaderSourceDescriptor} from "../data_shader_source"
 import { indexPatterns } from '@kbn/data-plugin/public';
 import { DataViewField,DataView } from '@kbn/data-views-plugin/common';
-import {
-  FIELD_ORIGIN,
-} from '@kbn/maps-plugin/common/constants';
+
 
 
 
@@ -387,13 +384,6 @@ const ellipseSearchDistance = [
   },
 ];
 
-interface FieldMeta {
-  label: string;
-  type: string;
-  pattern: any;
-  name: string;
-  origin: FIELD_ORIGIN;
-}
 
 interface Props {
   handlePropertyChange: (settings: Partial<DataShaderSourceDescriptor>) => void;
@@ -402,8 +392,8 @@ interface Props {
 }
 
 interface State {
-  categoryFields: FieldMeta[];
-  numberFields: FieldMeta[];
+  categoryFields: DataViewField[];
+  numberFields: DataViewField[];
   isLoadingIndexPattern: boolean;
   noGeoIndexPatternsExist: boolean;
   filterByMapBounds: boolean;
@@ -487,37 +477,16 @@ export class DatashaderStyleEditor extends Component<Props, State> {
   }
 
   async _loadFields() {
-    const getFieldMeta = async (field: IField): Promise<FieldMeta> => {
-      const formatter = await this.props.layer.getFieldFormatter(field);
-      const indexPattern = await getIndexPatternService().get(this.props.layer.getIndexPatternIds()[0]);
-      const fieldMeta = indexPattern.getFieldByName(field.getName());
-      let pattern = fieldMeta?.spec.format ? fieldMeta?.spec.format.params?.pattern : null;
-
-      if (!pattern && formatter) {
-        pattern = formatter.getParamDefaults().pattern
-      }
-
-      return {
-        label: await field.getLabel(),
-        type: await field.getDataType(),
-        pattern: pattern,
-        name: field.getName(),
-        origin: field.getOrigin(),
-      };
-    };
 
     const categoryFields = await this.props.layer.getCategoricalFields();
-    const categoryFieldPromises = categoryFields.map(getFieldMeta);
-    const categoryFieldsArray = (await Promise.all(categoryFieldPromises)).filter((f) => (f !== null));
-    if (this._isMounted && !_.isEqual(categoryFieldsArray, this.state.categoryFields)) {
-      this.setState({ categoryFields: categoryFieldsArray });
+    if (this._isMounted && !_.isEqual(categoryFields, this.state.categoryFields)) {
+      this.setState({ categoryFields: categoryFields });
     }
 
     const numberFields = await this.props.layer.getNumberFields();
-    const numberFieldPromises = numberFields.map(getFieldMeta);
-    const numberFieldsArray = (await Promise.all(numberFieldPromises)).filter((f) => (f !== null));
-    if (this._isMounted && !_.isEqual(numberFieldsArray, this.state.numberFields)) {
-      this.setState({ numberFields: numberFieldsArray });
+    
+    if (this._isMounted && !_.isEqual(numberFields, this.state.numberFields)) {
+      this.setState({ numberFields: numberFields });
     }
   }
 
@@ -568,13 +537,13 @@ export class DatashaderStyleEditor extends Component<Props, State> {
       return;
     }
 
-    const field = _.find(this.state.categoryFields, (o: FieldMeta) => (o.name === fieldName));
+    const field = _.find(this.state.categoryFields, (o: DataViewField) => (o.name === fieldName));
     
     if (field) {
       var updates = {
         [DATASHADER_STYLES.CATEGORY_FIELD]: field.name,
         [DATASHADER_STYLES.CATEGORY_FIELD_TYPE]: field.type,
-        [DATASHADER_STYLES.CATEGORY_FIELD_PATTERN]: field.pattern,
+        [DATASHADER_STYLES.CATEGORY_FIELD_PATTERN]: field.spec.format?field.spec.format.params?.pattern as string:null,//fieldMeta?.spec.format ? fieldMeta?.spec.format.params?.pattern : null;
       };
 
       let useHistogram: boolean = false;

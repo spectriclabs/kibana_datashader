@@ -389,7 +389,7 @@ return new AbstractField({
 
   }
 
-  async getCategoricalFields(): Promise<IField[]> {
+  async getCategoricalFields(): Promise<DataViewField[]> {
     try {
       const indexPattern = await this.getIndexPattern();
       const aggFields: DataViewField[] = [];
@@ -408,9 +408,7 @@ return new AbstractField({
         });
       });
 
-      return aggFields.map((field: any) => {
-        return this.createField({ fieldName: field.name }) as IField;
-      });
+      return aggFields
     } catch (error) {
       return [];
     }
@@ -426,9 +424,7 @@ return new AbstractField({
           numberFields.push(field);
         });
       });
-      return numberFields.map((field: DataViewField) => {
-        return this.createField({ fieldName: field.name });
-      });
+      return numberFields
     } catch (error) {
       return [];
     }
