@@ -8,5 +8,5 @@ This plugin uses [spectric datashader to create map tiles](https://github.com/sp
 ## Installation
 git clone repo into kibana/plugins directory
 
-##configuration
+## configuration
 Add tms endpoint to the kibana config `datashader.url: "http://localhost:8000"`
