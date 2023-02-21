@@ -15,7 +15,7 @@ export const customRasterLayerWizard: LayerWizard = {
   id: PLUGIN_ID,
   categories: [LAYER_WIZARD_CATEGORY.REFERENCE],
   title: 'Data Shader',
-  description: 'Cool data shader layer',
+  description: 'Datashader',
   icon: 'grid',
   order: 100,
   renderWizard: (renderWizardArguments: RenderWizardArguments) => {
