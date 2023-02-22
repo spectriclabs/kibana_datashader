@@ -8,8 +8,7 @@
     "public/**/*.tsx",
     "common/**/*.ts",
     "server/**/*", 
-    "../../../typings/**/*",
-    "./config.ts"
+    "../../../typings/**/*"
   ],
   "references": [
     { "path": "../../src/core/tsconfig.json" },

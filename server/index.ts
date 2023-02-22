@@ -4,8 +4,8 @@ import {
     Plugin,
     PluginConfigDescriptor,
   } from '@kbn/core/server';
-import {mapConfigSchema} from '../config';
-import type { DataShaderConfig, } from '../config';
+import {mapConfigSchema} from '../common/config';
+import type { DataShaderConfig, } from '../common/config';
 
 export const config: PluginConfigDescriptor<DataShaderConfig> = {
     exposeToBrowser: {
