@@ -85,6 +85,8 @@ export type DataShaderSourceDescriptor = AbstractESSourceDescriptor & {
   attributionUrl: string,
   indexPatternId: string,
   geoField: string,
+  applyGlobalQuery:boolean,
+  applyGlobalTime: boolean
 
 }& DatashaderStylePropertiesDescriptor;
 export type DatashaderSourceConfig = {
@@ -143,8 +145,8 @@ export class DataShaderSource  implements IDataShaderSource {
       type: DataShaderSource.type,
       indexPatternId: settings.indexPatternId,
       geoField: settings.geoField,
-      applyGlobalQuery: settings.applyGlobalQuery,
-      applyGlobalTime: settings.applyGlobalTime, 
+      applyGlobalQuery: settings.applyGlobalQuery || true,
+      applyGlobalTime: settings.applyGlobalTime || true,
       ...defaultStyle
     } as DataShaderSourceDescriptor
   }
@@ -273,11 +275,11 @@ export class DataShaderSource  implements IDataShaderSource {
   }
 
   getApplyGlobalQuery(): boolean {
-    return true;
+    return this._descriptor.applyGlobalQuery;
   }
 
   getApplyGlobalTime(): boolean {
-    return true;
+    return this._descriptor.applyGlobalTime;
   }
 
   getApplyForceRefresh(): boolean {
