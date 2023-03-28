@@ -6,18 +6,17 @@
  */
 
 import { ReactElement } from 'react';
-import {DatashaderStyleEditor, DatashaderStylePropertiesDescriptor, DATASHADER_STYLES} from './ui/datashader_style'
-import { FieldFormatter, MIN_ZOOM, MAX_ZOOM, FIELD_ORIGIN, } from '@kbn/maps-plugin/common';
+import { FieldFormatter, MIN_ZOOM, MAX_ZOOM, FIELD_ORIGIN } from '@kbn/maps-plugin/common';
 import { Adapters } from '@kbn/inspector-plugin/common/adapters';
+import uuid from 'uuid/v4';
 import type {
   AbstractESSourceDescriptor,
   Attribution,
-  DataFilters,
   DataRequestMeta,
   MapExtent,
   Timeslice,
   TooltipFeatureAction,
-  VectorSourceRequestMeta
+  VectorSourceRequestMeta,
 } from '@kbn/maps-plugin/common/descriptor_types';
 
 import { PreIndexedShape } from '@kbn/maps-plugin/common/elasticsearch_util';
@@ -34,62 +33,65 @@ import type {
   SourceStatus,
 } from '@kbn/maps-plugin/public';
 
-
-//import { AbstractSource } from '@kbn/maps-plugin/public/classes/sources/source';
-//import { XYZTMSSource } from '@kbn/maps-plugin/public/classes/sources/xyz_tms_source';
-//import { XYZTMSSource } from '../../../../x-pack/plugins/maps/public/classes/sources/xyz_tms_source';
+// import { AbstractSource } from '@kbn/maps-plugin/public/classes/sources/source';
+// import { XYZTMSSource } from '@kbn/maps-plugin/public/classes/sources/xyz_tms_source';
+// import { XYZTMSSource } from '../../../../x-pack/plugins/maps/public/classes/sources/xyz_tms_source';
 import React from 'react';
-import { DataViewField,DataView } from '@kbn/data-views-plugin/common';
+import { DataViewField, DataView } from '@kbn/data-views-plugin/common';
 import { fromKueryExpression, luceneStringToDsl, toElasticsearchQuery } from '@kbn/es-query';
-import { getIndexPatternService } from '../kibana_services';
-//import { ESDocField } from '@kbn/maps-plugin/public/classes/fields/es_doc_field';
+// import { ESDocField } from '@kbn/maps-plugin/public/classes/fields/es_doc_field';
 import { i18n } from '@kbn/i18n';
 import { FieldFormat } from '@kbn/field-formats-plugin/common';
 import { OnSourceChangeArgs } from '@kbn/maps-plugin/public/classes/sources/source';
-import { AbstractField } from './fields/field';
 import _ from 'lodash';
 import { RasterTileSource } from 'maplibre-gl';
 import { GeoJsonProperties, Geometry, Position } from 'geojson';
 import { RasterTileSourceData } from '@kbn/maps-plugin/public/classes/sources/raster_source';
+import {
+  DatashaderStyleEditor,
+  DatashaderStylePropertiesDescriptor,
+  DATASHADER_STYLES,
+} from './ui/datashader_style';
+import { getIndexPatternService } from '../kibana_services';
+import { AbstractField } from './fields/field';
 import { DatashaderLegend } from './ui/datashader_legend';
-const NUMBER_DATA_TYPES = [ "number" ]
+const NUMBER_DATA_TYPES = ['number'];
 export const CATEGORICAL_DATA_TYPES = ['string', 'ip', 'boolean'];
-import { DATASHADER_BUCKET_SELECT } from "./ui/datashader_legend";
+import { DATASHADER_BUCKET_SELECT } from './ui/datashader_legend';
 
 const urlRe = /^(\w+):\/\/([^/?]*)(\/[^?]+)?\??(.+)?/;
 
 function parseUrl(url: string) {
-    const parts = url.match(urlRe);
-    if (!parts) {
-        throw new Error(`Unable to parse URL "${url}"`);
-    }
-    let paramParts =  parts[4] ? parts[4].split('&') : []
-    let params:any = {}
-    paramParts.forEach(p=>{
-      let [key,value] = p.split("=");
-      params[key] = decodeURIComponent(value)
-    })
-    return {
-        protocol: parts[1],
-        authority: parts[2],
-        path: parts[3] || '/',
-        params: params
-    };
+  const parts = url.match(urlRe);
+  if (!parts) {
+    throw new Error(`Unable to parse URL "${url}"`);
+  }
+  const paramParts = parts[4] ? parts[4].split('&') : [];
+  const params: any = {};
+  paramParts.forEach((p) => {
+    const [key, value] = p.split('=');
+    params[key] = decodeURIComponent(value);
+  });
+  return {
+    protocol: parts[1],
+    authority: parts[2],
+    path: parts[3] || '/',
+    params,
+  };
 }
 
 export type DataShaderSourceDescriptor = AbstractESSourceDescriptor & {
-  urlTemplate: string,
-  indexTitle: string,
-  timeFieldName: string,
-  attributionText: string,
-  attributionUrl: string,
-  indexPatternId: string,
-  geoField: string,
-  applyGlobalQuery:boolean,
-  applyGlobalTime: boolean
-
-}& DatashaderStylePropertiesDescriptor;
-export type DatashaderSourceConfig = {
+  urlTemplate: string;
+  indexTitle: string;
+  timeFieldName: string;
+  attributionText: string;
+  attributionUrl: string;
+  indexPatternId: string;
+  geoField: string;
+  applyGlobalQuery: boolean;
+  applyGlobalTime: boolean;
+} & DatashaderStylePropertiesDescriptor;
+export interface DatashaderSourceConfig {
   urlTemplate: string;
   indexTitle: string;
   indexPatternId: string;
@@ -97,48 +99,47 @@ export type DatashaderSourceConfig = {
   geoField: string;
   applyGlobalQuery: boolean;
   applyGlobalTime: boolean;
-} 
+}
 
-var defaultStyle = {
-  [DATASHADER_STYLES.TIME_OVERLAP]:false,
-  [DATASHADER_STYLES.TIME_OVERLAP_SIZE]:"auto",
-  [DATASHADER_STYLES.COLOR_RAMP_NAME]: "bmy",
-  [DATASHADER_STYLES.COLOR_KEY_NAME]: "glasbey_light",
-  [DATASHADER_STYLES.SPREAD]: "auto",
-  [DATASHADER_STYLES.SPAN_RANGE]: "normal",
-  [DATASHADER_STYLES.GRID_RESOLUTION]: "finest",
-  [DATASHADER_STYLES.MODE]: "heat",
-  [DATASHADER_STYLES.CATEGORY_FIELD]: "",
+const defaultStyle = {
+  [DATASHADER_STYLES.TIME_OVERLAP]: false,
+  [DATASHADER_STYLES.TIME_OVERLAP_SIZE]: 'auto',
+  [DATASHADER_STYLES.COLOR_RAMP_NAME]: 'bmy',
+  [DATASHADER_STYLES.COLOR_KEY_NAME]: 'glasbey_light',
+  [DATASHADER_STYLES.SPREAD]: 'auto',
+  [DATASHADER_STYLES.SPAN_RANGE]: 'normal',
+  [DATASHADER_STYLES.GRID_RESOLUTION]: 'finest',
+  [DATASHADER_STYLES.MODE]: 'heat',
+  [DATASHADER_STYLES.CATEGORY_FIELD]: '',
   [DATASHADER_STYLES.CATEGORY_FIELD_TYPE]: null,
   [DATASHADER_STYLES.CATEGORY_FIELD_PATTERN]: null,
   [DATASHADER_STYLES.SHOW_ELLIPSES]: false,
   [DATASHADER_STYLES.USE_HISTOGRAM]: undefined,
-  [DATASHADER_STYLES.ELLIPSE_MAJOR_FIELD]: "",
-  [DATASHADER_STYLES.ELLIPSE_MINOR_FIELD]: "",
-  [DATASHADER_STYLES.ELLIPSE_TILT_FIELD]: "",
-  [DATASHADER_STYLES.ELLIPSE_UNITS]: "semi_majmin_nm",
-  [DATASHADER_STYLES.ELLIPSE_SEARCH_DISTANCE]: "normal",
+  [DATASHADER_STYLES.ELLIPSE_MAJOR_FIELD]: '',
+  [DATASHADER_STYLES.ELLIPSE_MINOR_FIELD]: '',
+  [DATASHADER_STYLES.ELLIPSE_TILT_FIELD]: '',
+  [DATASHADER_STYLES.ELLIPSE_UNITS]: 'semi_majmin_nm',
+  [DATASHADER_STYLES.ELLIPSE_SEARCH_DISTANCE]: 'normal',
   [DATASHADER_STYLES.ELLIPSE_THICKNESS]: 0,
   [DATASHADER_STYLES.MANUAL_RESOLUTION]: false,
-} as DatashaderStylePropertiesDescriptor
+} as DatashaderStylePropertiesDescriptor;
 export interface IDataShaderSource extends IVectorSource {
   getIndexPattern(): Promise<DataView>;
-  getStyleUrlParams(data:DatashaderStylePropertiesDescriptor):string;
-  getMap(): any |undefined;
+  getStyleUrlParams(data: DatashaderStylePropertiesDescriptor): string;
+  getMap(): any | undefined;
 }
-var DATASHADER_ID = 1;
-export class DataShaderSource  implements IDataShaderSource {
-  static type = "DATA_SHADER";
+
+export class DataShaderSource implements IDataShaderSource {
+  static type = 'DATA_SHADER';
 
   readonly _descriptor: DataShaderSourceDescriptor;
   indexPattern: any;
   _previousSource: any;
-  currentDataFilter: DataFilters | undefined;
+
   map: any | undefined;
-  static createDescriptor(settings:DatashaderSourceConfig): DataShaderSourceDescriptor {
-    console.log("HERE!!!")
+  static createDescriptor(settings: DatashaderSourceConfig): DataShaderSourceDescriptor {
     return {
-      id:`DataShader-${DATASHADER_ID++}`,
+      id: `DataShader-${uuid()}`,
       urlTemplate: settings.urlTemplate,
       indexTitle: settings.indexTitle,
       timeFieldName: settings.timeFieldName,
@@ -147,8 +148,8 @@ export class DataShaderSource  implements IDataShaderSource {
       geoField: settings.geoField,
       applyGlobalQuery: settings.applyGlobalQuery || true,
       applyGlobalTime: settings.applyGlobalTime || true,
-      ...defaultStyle
-    } as DataShaderSourceDescriptor
+      ...defaultStyle,
+    } as DataShaderSourceDescriptor;
   }
 
   constructor(sourceDescriptor: DataShaderSourceDescriptor) {
@@ -161,45 +162,45 @@ export class DataShaderSource  implements IDataShaderSource {
     return true;
   }
 
-  renderLegendDetails(dataRequest:DataRequest): ReactElement<any> | null {
-    if(!dataRequest){
-      console.log(dataRequest)
-      return null
+  renderLegendDetails(dataRequest: DataRequest): ReactElement<any> | null {
+    if (!dataRequest) {
+      return null;
     }
-    return       (<DatashaderLegend
-    sourceDescriptorUrlTemplate={this._descriptor.urlTemplate}
-    sourceDescriptorIndexTitle={this._descriptor.indexTitle}
-    styleDescriptorCategoryField={this._descriptor.categoryField}
-    style={this}
-    sourceDataRequest={dataRequest}
-
-  />)
+    return (
+      <DatashaderLegend
+        sourceDescriptorUrlTemplate={this._descriptor.urlTemplate}
+        sourceDescriptorIndexTitle={this._descriptor.indexTitle}
+        styleDescriptorCategoryField={this._descriptor.categoryField}
+        style={this}
+        sourceDataRequest={dataRequest}
+      />
+    );
   }
 
   isSourceStale(mbSource: RasterTileSource, sourceData: RasterTileSourceData): boolean {
     this.map = mbSource.map;
-    //TODO calculate if the layer needs to be removed and refreshed color changed or ellipses turned on 
-    if(!mbSource.tiles || mbSource.tiles[0] == ''){
-      this._previousSource = sourceData.url
-      return true
+    // TODO calculate if the layer needs to be removed and refreshed color changed or ellipses turned on
+    if (!mbSource.tiles || mbSource.tiles[0] === '') {
+      this._previousSource = sourceData.url;
+      return true;
     }
-    const unhashedParams = ['zoom','extent']
+    const unhashedParams = ['zoom', 'extent'];
     try {
-    const pastParams = parseUrl(mbSource.tiles[0]).params
-      pastParams.params = JSON.parse(pastParams.params)
-      const newParams = parseUrl(sourceData.url).params
-      newParams.params = JSON.parse(newParams.params)
-      unhashedParams.forEach(p=>{
-        delete pastParams.params[p]
-        delete newParams.params[p]
-      })
-      this._previousSource = sourceData.url
+      const pastParams = parseUrl(mbSource.tiles[0]).params;
+      pastParams.params = JSON.parse(pastParams.params);
+      const newParams = parseUrl(sourceData.url).params;
+      newParams.params = JSON.parse(newParams.params);
+      unhashedParams.forEach((p) => {
+        delete pastParams.params[p];
+        delete newParams.params[p];
+      });
+      this._previousSource = sourceData.url;
       return JSON.stringify(pastParams) !== JSON.stringify(newParams);
     } catch (error) {
-      if(mbSource.tiles && mbSource.tiles[0] === sourceData.url){
-        return false; //if we are still loading and are using a dataurl
+      if (mbSource.tiles && mbSource.tiles[0] === sourceData.url) {
+        return false; // if we are still loading and are using a dataurl
       }
-     return true; //url didn't parse correctly and needs to be refreshed 
+      return true; // url didn't parse correctly and needs to be refreshed
     }
   }
 
@@ -213,11 +214,12 @@ export class DataShaderSource  implements IDataShaderSource {
     return false;
   }
 
-  async canSkipSourceUpdate(dataRequest:DataRequest,nextRequestMeta:DataRequestMeta): Promise<boolean>{
-    console.log("here lets do an update!")
-    return false
+  async canSkipSourceUpdate(
+    dataRequest: DataRequest,
+    nextRequestMeta: DataRequestMeta
+  ): Promise<boolean> {
+    return false;
   }
-
 
   /**
    * return list of immutable source properties.
@@ -265,13 +267,20 @@ export class DataShaderSource  implements IDataShaderSource {
   }
 
   renderSourceSettingsEditor(sourceEditorArgs: SourceEditorArgs): ReactElement<any> | null {
-    return (<DatashaderStyleEditor handlePropertyChange={(settings: Partial<DatashaderStylePropertiesDescriptor>): void => {
-      //throw new Error('Function not implemented.');
-      let args = Object.entries(settings).map(v=>({propName:v[0],value:v[1]} as OnSourceChangeArgs))
-      //let args = Object.keys(settings).map(key=>({propName:key,value:settings[key] as any} as OnSourceChangeArgs)) 
-      sourceEditorArgs.onChange(...args)
-    } } layer={this} properties={this._descriptor}/>);
-    
+    return (
+      <DatashaderStyleEditor
+        handlePropertyChange={(settings: Partial<DatashaderStylePropertiesDescriptor>): void => {
+          // throw new Error('Function not implemented.');
+          const args = Object.entries(settings).map(
+            (v) => ({ propName: v[0], value: v[1] } as OnSourceChangeArgs)
+          );
+          // let args = Object.keys(settings).map(key=>({propName:key,value:settings[key] as any} as OnSourceChangeArgs))
+          sourceEditorArgs.onChange(...args);
+        }}
+        layer={this}
+        properties={this._descriptor}
+      />
+    );
   }
 
   getApplyGlobalQuery(): boolean {
@@ -290,17 +299,13 @@ export class DataShaderSource  implements IDataShaderSource {
     return false;
   }
 
-
   getFieldByName(fieldName: string): IField | null {
     return this.createField({ fieldName });
   }
 
-
   isBoundsAware(): boolean {
     return false;
   }
-
-
 
   async getBoundsForFilters(
     boundsFilters: BoundsRequestMeta,
@@ -339,7 +344,6 @@ export class DataShaderSource  implements IDataShaderSource {
   async getTooltipProperties(properties: GeoJsonProperties): Promise<ITooltipProperty[]> {
     return [];
   }
-
 
   showJoinEditor() {
     return true;
@@ -382,51 +386,50 @@ export class DataShaderSource  implements IDataShaderSource {
     // Its not possible to filter by geometry for vector tile sources since there is no way to get original geometry
     return [];
   }
-  createField({ fieldName }: { fieldName: string}): AbstractField {
-return new AbstractField({
+  createField({ fieldName }: { fieldName: string }): AbstractField {
+    return new AbstractField({
       fieldName,
       source: this,
       origin: FIELD_ORIGIN.SOURCE,
     });
-
   }
 
-  async getCategoricalFields(): Promise<DataViewField[]> {
+  async getCategoricalFields(): Promise<Array<{ field: DataViewField; format: FieldFormat }>> {
     try {
       const indexPattern = await this.getIndexPattern();
-      const aggFields: DataViewField[] = [];
-      
-      CATEGORICAL_DATA_TYPES.forEach(dataType => {
+      const aggFields: Array<{ field: DataViewField; format: FieldFormat }> = [];
+
+      CATEGORICAL_DATA_TYPES.forEach((dataType) => {
         indexPattern.fields.getByType(dataType).forEach((field: any) => {
           if (field.aggregatable) {
-            aggFields.push(field);
+            aggFields.push({ field, format: indexPattern.getFormatterForField(field) });
           }
         });
       });
-      
-      NUMBER_DATA_TYPES.forEach(dataType => {
-        indexPattern.fields.getByType(dataType).forEach((field:any) => {
-          aggFields.push(field);
+
+      NUMBER_DATA_TYPES.forEach((dataType) => {
+        indexPattern.fields.getByType(dataType).forEach((field: any) => {
+          aggFields.push({ field, format: indexPattern.getFormatterForField(field) });
         });
       });
 
-      return aggFields
+      return aggFields;
     } catch (error) {
       return [];
     }
   }
 
-  async getNumberFields() {
+  async getNumberFields(): Promise<Array<{ field: DataViewField; format: FieldFormat }>> {
     try {
       const indexPattern = await this.getIndexPattern();
-      const numberFields: DataViewField[] = [];
-      
-      NUMBER_DATA_TYPES.forEach(dataType => {
-        indexPattern.fields.getByType(dataType).forEach((field:any) => {
-          numberFields.push(field);
+      const numberFields: Array<{ field: DataViewField; format: FieldFormat }> = [];
+
+      NUMBER_DATA_TYPES.forEach((dataType) => {
+        indexPattern.fields.getByType(dataType).forEach((field: any) => {
+          numberFields.push({ field, format: indexPattern.getFormatterForField(field) });
         });
       });
-      return numberFields
+      return numberFields;
     } catch (error) {
       return [];
     }
@@ -463,7 +466,7 @@ return new AbstractField({
     }
 
     const fieldFromIndexPattern = indexPattern.fields.getByName(field.getRootName());
-    
+
     if (!fieldFromIndexPattern) {
       return null;
     }
@@ -516,202 +519,208 @@ return new AbstractField({
     return false;
   }
   getStyleUrlParams(data: DatashaderStylePropertiesDescriptor) {
-    let urlParams = "";
-    //Check to see if the legend changed any params. (kinda a hacky way to do this but the layer descriptor cannot be changed unless editing)
-    var bucket_select = DATASHADER_BUCKET_SELECT[this._descriptor.id]
-    if(!bucket_select){
-      bucket_select = [0,100] //use the full range if not specified
+    let urlParams = '';
+    // Check to see if the legend changed any params. (kinda a hacky way to do this but the layer descriptor cannot be changed unless editing)
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    let bucket_select = DATASHADER_BUCKET_SELECT[this._descriptor.id];
+    if (!bucket_select) {
+      bucket_select = [0, 100]; // use the full range if not specified
     }
 
-    let [bucket_min, bucket_max] = bucket_select;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const [bucket_min, bucket_max] = bucket_select;
     // the current implementation of auto is too slow, so remove it
-    let span = data.spanRange;
-    //if (span === "auto") {
+    const span = data.spanRange;
+    // if (span === "auto") {
     //  span = "normal";
-    //}
+    // }
 
     urlParams = urlParams.concat(
-        "&span=", span,
-        "&bucket_min=",bucket_min,
-        "&bucket_max=",bucket_max
-    )
+      '&span=',
+      span,
+      '&bucket_min=',
+      bucket_min,
+      '&bucket_max=',
+      bucket_max
+    );
 
-    if (data.showEllipses &&
+    if (
+      data.showEllipses &&
       data.ellipseMajorField &&
       data.ellipseMinorField &&
-      data.ellipseTiltField) {
+      data.ellipseTiltField
+    ) {
       urlParams = urlParams.concat(
-        "&ellipses=", data.showEllipses.toString(),
-        "&ellipse_major=", data.ellipseMajorField,
-        "&ellipse_minor=", data.ellipseMinorField,
-        "&ellipse_tilt=", data.ellipseTiltField,
-        "&ellipse_units=", data.ellipseUnits,
-        "&ellipse_search=", data.ellipseSearchDistance,
-        "&spread=", data.ellipseThickness.toString(),
-        "&timeOverlap=",data.timeOverlap.toString(),
-        "&timeOverlapSize=",data.timeOverlapSize
+        '&ellipses=',
+        data.showEllipses.toString(),
+        '&ellipse_major=',
+        data.ellipseMajorField,
+        '&ellipse_minor=',
+        data.ellipseMinorField,
+        '&ellipse_tilt=',
+        data.ellipseTiltField,
+        '&ellipse_units=',
+        data.ellipseUnits,
+        '&ellipse_search=',
+        data.ellipseSearchDistance,
+        '&spread=',
+        data.ellipseThickness.toString(),
+        '&timeOverlap=',
+        data.timeOverlap.toString(),
+        '&timeOverlapSize=',
+        data.timeOverlapSize
       );
     } else {
       urlParams = urlParams.concat(
-        "&spread=", data.spread,
-        "&resolution=", data.gridResolution,
-        "&timeOverlap=",data.timeOverlap.toString(),
-        "&timeOverlapSize=",data.timeOverlapSize
-      )
+        '&spread=',
+        data.spread,
+        '&resolution=',
+        data.gridResolution,
+        '&timeOverlap=',
+        data.timeOverlap.toString(),
+        '&timeOverlapSize=',
+        data.timeOverlapSize
+      );
     }
 
-    if (data.mode === "heat") {
-      urlParams = urlParams.concat(
-        "&cmap=", data.colorRampName,
-      );
-    } else if (data.mode === "category" &&
-              data.categoryField &&
-              data.categoryFieldType &&
-              data.colorKeyName
+    if (data.mode === 'heat') {
+      urlParams = urlParams.concat('&cmap=', data.colorRampName);
+    } else if (
+      data.mode === 'category' &&
+      data.categoryField &&
+      data.categoryFieldType &&
+      data.colorKeyName
     ) {
       urlParams = urlParams.concat(
-        "&category_field=", data.categoryField,
-        "&category_type=", data.categoryFieldType,
-        "&cmap=", data.colorKeyName,
+        '&category_field=',
+        data.categoryField,
+        '&category_type=',
+        data.categoryFieldType,
+        '&cmap=',
+        data.colorKeyName
       );
       if (data.useHistogram === true) {
-        urlParams = urlParams.concat(
-          "&category_histogram=true" 
-        );
+        urlParams = urlParams.concat('&category_histogram=true');
       } else if (data.useHistogram === false) {
-        urlParams = urlParams.concat(
-          "&category_histogram=false" 
-        );        
+        urlParams = urlParams.concat('&category_histogram=false');
       }
 
       if (data) {
-        let pattern = (data.categoryFieldMeta && data.categoryFieldMeta.spec.format) ? data.categoryFieldMeta.spec.format.params.pattern : null;
-        if (!pattern && data.categoryFieldFormatter) {
-          pattern = data.categoryFieldFormatter.getParamDefaults().pattern
-        }
-        urlParams = urlParams.concat(
-          "&category_pattern=", pattern
-        );
-      } else if (data.categoryFieldPattern) {
-        urlParams = urlParams.concat(
-          "&category_pattern=", data.categoryFieldPattern
-        );
+        const pattern = data.categoryFieldPattern ? data.categoryFieldPattern : null;
+        urlParams = urlParams.concat('&category_pattern=', pattern || 'null');
       }
     }
 
     return urlParams;
   }
-  async getUrlTemplate(dataFilters:DataFilters): Promise<string> {
+  async getUrlTemplate(dataFilters: DataRequestMeta): Promise<string> {
     try {
-      this.currentDataFilter = dataFilters;
-    let data = {...dataFilters,...this._descriptor}
-    console.log(dataFilters)
-    console.log(this._descriptor)
-    let url_check = new URL(this._descriptor.urlTemplate)
-    if(url_check.origin === "null"){
-      return NOT_SETUP //Must return a url to an image or it throws errors so we return a 256x256 blank data uri
-    }
-    const indexTitle: string = _.get(data, 'indexTitle', '');
-    const geoField: string = _.get(data, 'geoField', '');
-    const timeFieldName: string = _.get(data, 'timeFieldName', '');
-    const dataUrl: string = _.get(data, 'urlTemplate', '');
-    const applyGlobalQuery: boolean = _.get(data, 'applyGlobalQuery', true);
-    const applyGlobalTime: boolean = _.get(data, 'applyGlobalTime', true);
+      const data = { ...dataFilters, ...this._descriptor };
+      const urlCheck = new URL(this._descriptor.urlTemplate);
+      if (urlCheck.origin === 'null') {
+        return NOT_SETUP; // Must return a url to an image or it throws errors so we return a 256x256 blank data uri
+      }
+      const indexTitle: string = _.get(data, 'indexTitle', '');
+      const geoField: string = _.get(data, 'geoField', '');
+      const timeFieldName: string = _.get(data, 'timeFieldName', '');
+      const dataUrl: string = _.get(data, 'urlTemplate', '');
+      const applyGlobalQuery: boolean = _.get(data, 'applyGlobalQuery', true);
+      const applyGlobalTime: boolean = _.get(data, 'applyGlobalTime', true);
 
-    if (indexTitle.length === 0) {
-      return NOT_SETUP;
-    }
-
-    if (geoField.length === 0) {
-      return NOT_SETUP;
-    }
-
-    if (timeFieldName.length === 0) {
-      return NOT_SETUP;
-    }
-
-    if (dataUrl.length === 0) {
-      return NOT_SETUP;
-    }
-
-    let currentParams = "";
-    const dataMeta = data
-    
-    if (dataMeta) {
-      const currentParamsObj: any = {};
-
-      if (applyGlobalTime) {
-        currentParamsObj.timeFilters = dataMeta.timeFilters;
+      if (indexTitle.length === 0) {
+        return NOT_SETUP;
       }
 
-      currentParamsObj.filters = [];
+      if (geoField.length === 0) {
+        return NOT_SETUP;
+      }
 
-      if (applyGlobalQuery) {
-        const dataMetaFilters = dataMeta.filters || [];
-        currentParamsObj.filters = [...dataMetaFilters];
-        
-        if (dataMeta.query && dataMeta.query.language === "kuery") {
-          const kueryNode = fromKueryExpression(dataMeta.query.query);
-          const kueryDSL = toElasticsearchQuery(kueryNode);
-          currentParamsObj.query = {
-            language: "dsl",
-            query: kueryDSL,
-          };
-        } else if (dataMeta.query && dataMeta.query.language === "lucene") {
-          const luceneDSL = luceneStringToDsl(dataMeta.query.query);
-          currentParamsObj.query = {
-            language: "dsl",
-            query: luceneDSL,
-          };
-        } else {
-          currentParamsObj.query = dataMeta.query;
+      if (timeFieldName.length === 0) {
+        return NOT_SETUP;
+      }
+
+      if (dataUrl.length === 0) {
+        return NOT_SETUP;
+      }
+
+      let currentParams = '';
+      const dataMeta = data;
+
+      if (dataMeta) {
+        const currentParamsObj: any = {};
+
+        if (applyGlobalTime) {
+          currentParamsObj.timeFilters = dataMeta.timeFilters;
         }
-      }
-      
-      currentParamsObj.extent = dataMeta.extent; // .buffer has been expanded to align with tile boundaries
-      currentParamsObj.zoom = dataMeta.zoom;
-      if (data.query) {
-        if (data.query.language === "kuery") {
-          const kueryNode = fromKueryExpression(data.query.query);
-          const kueryDSL = toElasticsearchQuery(kueryNode);
-          currentParamsObj.filters.push({
-            "meta": {
-              "type" : "bool",
-            },
-            "query": kueryDSL
-          });
-        } else if (data.query.language === "lucene") {
-          const luceneDSL = luceneStringToDsl(data.query.query);
-          currentParamsObj.filters.push({
-            "meta": {
-              "type" : "bool",
-            },
-            "query": luceneDSL
-           });
+
+        currentParamsObj.filters = [];
+
+        if (applyGlobalQuery) {
+          const dataMetaFilters = dataMeta.filters || [];
+          currentParamsObj.filters = [...dataMetaFilters];
+
+          if (dataMeta.query && dataMeta.query.language === 'kuery') {
+            const kueryNode = fromKueryExpression(dataMeta.query.query);
+            const kueryDSL = toElasticsearchQuery(kueryNode);
+            currentParamsObj.query = {
+              language: 'dsl',
+              query: kueryDSL,
+            };
+          } else if (dataMeta.query && dataMeta.query.language === 'lucene') {
+            const luceneDSL = luceneStringToDsl(dataMeta.query.query);
+            currentParamsObj.query = {
+              language: 'dsl',
+              query: luceneDSL,
+            };
+          } else {
+            currentParamsObj.query = dataMeta.query;
+          }
         }
+
+        currentParamsObj.extent = dataMeta.extent; // .buffer has been expanded to align with tile boundaries
+        currentParamsObj.zoom = dataMeta.zoom;
+
+        if (data.sourceQuery) {
+          if (data.sourceQuery.language === 'kuery') {
+            const kueryNode = fromKueryExpression(data.sourceQuery.query);
+            const kueryDSL = toElasticsearchQuery(kueryNode);
+            currentParamsObj.filters.push({
+              meta: {
+                type: 'bool',
+              },
+              query: kueryDSL,
+            });
+          } else if (data.sourceQuery.language === 'lucene') {
+            const luceneDSL = luceneStringToDsl(data.sourceQuery.query);
+            currentParamsObj.filters.push({
+              meta: {
+                type: 'bool',
+              },
+              query: luceneDSL,
+            });
+          }
+        }
+
+        currentParams = currentParams.concat(
+          'params=',
+          encodeURIComponent(JSON.stringify(currentParamsObj)),
+          '&timestamp_field=',
+          timeFieldName,
+          '&geopoint_field=',
+          geoField,
+          this.getStyleUrlParams(data)
+        );
       }
 
-      currentParams = currentParams.concat(
-        "params=", encodeURIComponent(JSON.stringify(currentParamsObj)),
-        "&timestamp_field=", timeFieldName,
-        "&geopoint_field=", geoField,
-        this.getStyleUrlParams(data),
-      );
-    }
-
-    const url = dataUrl.concat(
-      "/tms/",
-      indexTitle,
-      "/{z}/{x}/{y}.png?",
-      currentParams
-    );
-    return url
-  } catch (error) {
+      const url = dataUrl.concat('/tms/', indexTitle, '/{z}/{x}/{y}.png?', currentParams);
+      return url;
+    } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn(error);
       return NOT_SETUP;
-  }
+    }
   }
 }
 
-
-const NOT_SETUP = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAQAAAD2e2DtAAABu0lEQVR42u3SQREAAAzCsOHf9F6oIJXQS07TxQIABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAgAACwAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAAsAEAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAKg9kK0BATSHu+YAAAAASUVORK5CYII=" //empty image
+const NOT_SETUP =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAQAAAD2e2DtAAABu0lEQVR42u3SQREAAAzCsOHf9F6oIJXQS07TxQIABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAgAACwAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAAsAEAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAKg9kK0BATSHu+YAAAAASUVORK5CYII='; // empty image
