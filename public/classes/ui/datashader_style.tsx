@@ -92,176 +92,48 @@ function filterGeoField(field: DataViewField) {
     field.type
   );
 }
-const colorRampOptions = [
-  {
-    value: 'bmy',
-    text: 'bmy',
-    inputDisplay: 'bmy',
-  },
-  {
-    value: 'fire',
-    text: 'fire',
-    inputDisplay: 'fire',
-  },
-  {
-    value: 'colorwheel',
-    text: 'colorwheel',
-    inputDisplay: 'colorwheel',
-  },
-  {
-    value: 'isolum',
-    text: 'isolum',
-    inputDisplay: 'isolum',
-  },
-  {
-    value: 'gray',
-    text: 'gray',
-    inputDisplay: 'gray',
-  },
-  {
-    value: 'bkr',
-    text: 'bkr',
-    inputDisplay: 'bkr',
-  },
-  {
-    value: 'bgy',
-    text: 'bgy',
-    inputDisplay: 'bgy',
-  },
-  {
-    value: 'dimgray',
-    text: 'dimgray',
-    inputDisplay: 'dimgray',
-  },
-  {
-    value: 'bky',
-    text: 'bky',
-    inputDisplay: 'bky',
-  },
-  {
-    value: 'bgyw',
-    text: 'bgyw',
-    inputDisplay: 'bgyw',
-  },
-  {
-    value: 'coolwarm',
-    text: 'coolwarm',
-    inputDisplay: 'coolwarm',
-  },
-  {
-    value: 'kbc',
-    text: 'kbc',
-    inputDisplay: 'kbc',
-  },
-  {
-    value: 'kb',
-    text: 'kb',
-    inputDisplay: 'kb',
-  },
-  {
-    value: 'gwv',
-    text: 'gwv',
-    inputDisplay: 'gwv',
-  },
-  {
-    value: 'blues',
-    text: 'blues',
-    inputDisplay: 'blues',
-  },
-  {
-    value: 'kg',
-    text: 'kg',
-    inputDisplay: 'kg',
-  },
-  {
-    value: 'bjy',
-    text: 'bjy',
-    inputDisplay: 'bjy',
-  },
-  {
-    value: 'bmw',
-    text: 'bmw',
-    inputDisplay: 'bmw',
-  },
-  {
-    value: 'kr',
-    text: 'kr',
-    inputDisplay: 'kr',
-  },
-  {
-    value: 'rainbow',
-    text: 'rainbow',
-    inputDisplay: 'rainbow',
-  },
-  {
-    value: 'cwr',
-    text: 'cwr',
-    inputDisplay: 'cwr',
-  },
-  {
-    value: 'kgy',
-    text: 'kgy',
-    inputDisplay: 'kgy',
-  },
+const colorRampColors = [
+  'bmy',
+  'fire',
+  'colorwheel',
+  'isolum',
+  'gray',
+  'bkr',
+  'bgy',
+  'dimgray',
+  'bky',
+  'bgyw',
+  'coolwarm',
+  'kbc',
+  'kb',
+  'gwv',
+  'blues',
+  'kg',
+  'bjy',
+  'bmw',
+  'kr',
+  'rainbow',
+  'cwr',
+  'kgy',
 ];
 
-const colorKeyOptions = [
-  {
-    value: 'glasbey_light',
-    text: 'glasbey_light',
-    inputDisplay: 'glasbey_light',
-  },
-  {
-    value: 'glasbey_bw',
-    text: 'glasbey_bw',
-    inputDisplay: 'glasbey_bw',
-  },
-  {
-    value: 'glasbey',
-    text: 'glasbey',
-    inputDisplay: 'glasbey',
-  },
-  {
-    value: 'glasbey_cool',
-    text: 'glasbey_cool',
-    inputDisplay: 'glasbey_cool',
-  },
-  {
-    value: 'glasbey_warm',
-    text: 'glasbey_warm',
-    inputDisplay: 'glasbey_warm',
-  },
-  {
-    value: 'glasbey_dark',
-    text: 'glasbey_dark',
-    inputDisplay: 'glasbey_dark',
-  },
-  {
-    value: 'glasbey_category10',
-    text: 'glasbey_category10',
-    inputDisplay: 'glasbey_category10',
-  },
-  {
-    value: 'glasbey_hv',
-    text: 'glasbey_hv',
-    inputDisplay: 'glasbey_hv',
-  },
-  {
-    value: 'hv',
-    text: 'hv',
-    inputDisplay: 'hv',
-  },
-  {
-    value: 'category10',
-    text: 'category10',
-    inputDisplay: 'category10',
-  },
-  {
-    value: 'kibana5',
-    text: 'kibana5',
-    inputDisplay: 'kibana5',
-  },
+const colorRampOptions = colorRampColors.map((c) => ({ value: c, text: c, inputDisplay: c }));
+
+const colorKeyColors = [
+  'glasbey_light',
+  'glasbey_bw',
+  'glasbey',
+  'glasbey_cool',
+  'glasbey_warm',
+  'glasbey_dark',
+  'glasbey_category10',
+  'glasbey_hv',
+  'hv',
+  'category10',
+  'kibana5',
 ];
+
+const colorKeyOptions = colorKeyColors.map((c) => ({ value: c, text: c, inputDisplay: c }));
 
 const spanRangeOptions = [
   {

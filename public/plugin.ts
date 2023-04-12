@@ -5,12 +5,18 @@
  * 2.0.
  */
 
-import { AppNavLinkStatus, CoreSetup, CoreStart, Plugin, PluginInitializerContext } from '@kbn/core/public';
+import {
+  AppNavLinkStatus,
+  CoreSetup,
+  CoreStart,
+  Plugin,
+  PluginInitializerContext,
+} from '@kbn/core/public';
 import { MapsCustomRasterSourcePluginSetup, MapsCustomRasterSourcePluginStart } from './types';
 import { DataShaderSource } from './classes/data_shader_source';
 import { customRasterLayerWizard } from './classes/custom_raster_layer_wizard';
 import { PLUGIN_ID, PLUGIN_NAME } from '../common';
-import { setStartServices,setConfig } from './kibana_services';
+import { setStartServices, setConfig } from './kibana_services';
 import type { DataShaderConfig } from '../config';
 
 export class MapsCustomRasterSourcePlugin
@@ -24,7 +30,7 @@ export class MapsCustomRasterSourcePlugin
 
   public setup(
     core: CoreSetup<MapsCustomRasterSourcePluginStart>,
-    {  maps: mapsSetup }: MapsCustomRasterSourcePluginSetup
+    { maps: mapsSetup }: MapsCustomRasterSourcePluginSetup
   ) {
     // Register the Custom raster layer wizard with the Maps application
     mapsSetup.registerSource({
@@ -37,7 +43,7 @@ export class MapsCustomRasterSourcePlugin
     core.application.register({
       id: PLUGIN_ID,
       title: PLUGIN_NAME,
-      navLinkStatus:AppNavLinkStatus.hidden,
+      navLinkStatus: AppNavLinkStatus.hidden,
       mount: ({ history }) => {
         (async () => {
           const [coreStart] = await core.getStartServices();
@@ -51,10 +57,7 @@ export class MapsCustomRasterSourcePlugin
         return () => {};
       },
     });
-
-
   }
-
 
   public start(core: CoreStart, plugins: MapsCustomRasterSourcePluginStart): void {
     const mapConfig = this._initializerContext.config.get<DataShaderConfig>();
