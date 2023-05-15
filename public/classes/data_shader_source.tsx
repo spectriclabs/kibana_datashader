@@ -8,7 +8,7 @@
 import { ReactElement } from 'react';
 import { FieldFormatter, MIN_ZOOM, MAX_ZOOM, FIELD_ORIGIN } from '@kbn/maps-plugin/common';
 import { Adapters } from '@kbn/inspector-plugin/common/adapters';
-import uuid from 'uuid/v4';
+import { v4 as uuid } from 'uuid';
 import type {
   AbstractESSourceDescriptor,
   Attribution,

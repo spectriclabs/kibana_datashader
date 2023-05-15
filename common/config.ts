@@ -9,12 +9,11 @@
 import { schema, TypeOf } from '@kbn/config-schema';
 
 export const mapConfigSchema = schema.object({
-        url: schema.string({ defaultValue: '' }),
-        defaultGeospatialField: schema.string({ defaultValue: 'geo_center' }),
-        defaultEllipseMajor: schema.string({ defaultValue: 'geo_semimajor_nm' }),
-        defaultEllipseMinor: schema.string({ defaultValue: 'geo_semiminor_nm' }),
-        defaultEllipseTilt: schema.string({ defaultValue: 'geo_tilt_deg' }),
+  url: schema.string({ defaultValue: '' }),
+  defaultGeospatialField: schema.string({ defaultValue: 'geo_center' }),
+  defaultEllipseMajor: schema.string({ defaultValue: 'geo_semimajor_nm' }),
+  defaultEllipseMinor: schema.string({ defaultValue: 'geo_semiminor_nm' }),
+  defaultEllipseTilt: schema.string({ defaultValue: 'geo_tilt_deg' }),
 });
 
 export type DataShaderConfig = TypeOf<typeof mapConfigSchema>;
-

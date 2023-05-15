@@ -218,7 +218,8 @@ export class DatashaderLegend extends React.Component<Props, State> {
   render() {
     const [min, max] = [0, 1]; // FIXME get the real min and max values for the buckets probably want to fetch from backend and not directly from ES
     const descriptor = this.props.style.cloneDescriptor() as DataShaderSourceDescriptor;
-    const showBucketFilter = !descriptor.showEllipses;
+
+    const showBucketFilter = !descriptor.showEllipses && descriptor.mode === 'heat';
     this._setStateFromGlobal();
     const bucketOnChange = debounce((v: [number, number]) => {
       DATASHADER_BUCKET_SELECT[descriptor.id] = v;
