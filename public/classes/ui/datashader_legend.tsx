@@ -12,6 +12,8 @@ import type { DataRequest } from '@kbn/maps-plugin/public';
 import { EuiFlexGroup, EuiFlexItem, EuiSpacer, EuiText, EuiToolTip } from '@elastic/eui';
 import { DataShaderSourceDescriptor, IDataShaderSource } from '../data_shader_source';
 import { ValidatedRange } from './validated_range';
+import { DataRequestMeta } from '@kbn/maps-plugin/common/descriptor_types';
+import { DatashaderStylePropertiesDescriptor } from './datashader_style';
 export const DATASHADER_BUCKET_SELECT: any = {};
 interface Props {
   sourceDataRequest?: DataRequest;
@@ -94,11 +96,11 @@ export class DatashaderLegend extends React.Component<Props, State> {
       return;
     }
 
-    const data = {
+    const data  = {
       ...this.props.sourceDataRequest?.getData(),
       ...this.props.sourceDataRequest?.getMeta(),
       ...this.props.style.cloneDescriptor(),
-    };
+    } as unknown as DataShaderSourceDescriptor&DatashaderStylePropertiesDescriptor;
 
     if (!data) {
       return;
@@ -188,7 +190,9 @@ export class DatashaderLegend extends React.Component<Props, State> {
       timeFieldName,
       '&geopoint_field=',
       geoField,
-      this.props.style.getStyleUrlParams(data)
+      '&geofield_type=',
+      data.geoType,
+      this.props.style.getStyleUrlParams(data as unknown as DatashaderStylePropertiesDescriptor)
     );
 
     url = url.concat(

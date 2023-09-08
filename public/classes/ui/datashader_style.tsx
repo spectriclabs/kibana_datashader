@@ -283,6 +283,7 @@ interface State {
   indexTitle: string;
   timeFieldName: string;
   geoField: string;
+  geoType:string;
   geoFields: DataViewField[];
   applyGlobalQuery: boolean;
   applyGlobalTime: boolean;
@@ -312,6 +313,7 @@ export class DatashaderStyleEditor extends Component<Props, State> {
     indexTitle: '',
     timeFieldName: '',
     geoField: '',
+    geoType:'',
     geoFields: [],
     categoryFields: [],
     numberFields: [],
@@ -832,24 +834,25 @@ export class DatashaderStyleEditor extends Component<Props, State> {
     if (this.state.geoField && this.state.geoField.length === 0) {
       // const defaultGeospatialField = this.props.settings.defaultGeospatialField;
       const defaultGeospatialField = 'geo_center';
-
+     
       if (
         defaultGeospatialField &&
         _.find(this.state.geoFields, { name: defaultGeospatialField })
       ) {
-        this.onGeoFieldSelect(defaultGeospatialField);
+        this.onGeoFieldSelect(defaultGeospatialField,"geo_point");
       } else {
         // if a geoField isn't already selected use the first in the list
         if (geoFields[0]) {
-          this.onGeoFieldSelect(geoFields[0].name);
+          this.onGeoFieldSelect(geoFields[0].name,geoFields[0].type);
         }
       }
     }
   };
-  onGeoFieldSelect = (geoField: string | undefined) => {
+  onGeoFieldSelect = (geoField: string | undefined,geoType: string|undefined) => {
     this.setState(
       {
         geoField: geoField || '',
+        geoType: geoType || "geo_point"
       },
       () =>
         this.props.handlePropertyChange({
@@ -860,6 +863,7 @@ export class DatashaderStyleEditor extends Component<Props, State> {
           timeFieldName: _.get(this.state.indexPattern, 'timeFieldName', ''),
           indexPatternId: _.get(this.state.indexPattern, 'id', ''),
           geoField,
+          geoType,
         } as Partial<DataShaderSourceDescriptor>)
     );
   };
@@ -965,7 +969,7 @@ export class DatashaderStyleEditor extends Component<Props, State> {
           value={this.state.geoField}
           fields={this.state.geoFields}
           indexPatternDefined={this.state.indexPatternId !== undefined}
-          onChange={(name: string | undefined) => this.onGeoFieldSelect(name)}
+          onChange={(name: string | undefined,type:string|undefined) => this.onGeoFieldSelect(name,type)}
         />
         {this._renderTimeOverlapSelection()}
         {this._renderColorStyleConfiguration()}

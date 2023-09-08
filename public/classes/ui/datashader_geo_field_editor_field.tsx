@@ -6,7 +6,7 @@ import { DataViewField } from '@kbn/data-plugin/public/data_views';
 interface Props {
     indexPatternDefined: boolean;
     value: string;
-    onChange: (fieldName: string | undefined) => void;
+    onChange: (fieldName: string | undefined,fieldType: string | undefined) => void;
     fields: DataViewField[];
 };
 
@@ -29,7 +29,12 @@ export class DatashaderGeoFieldEditorField extends Component<Props, State> {
                   defaultMessage: 'Select geo field',
                 })}
                 value={this.props.value}
-                onChange={this.props.onChange}
+                onChange={(fieldName) => {
+                    let dvField = this.props.fields.find(field => field.name === fieldName)
+                    let fieldType = dvField?dvField.type:'';
+                    this.props.onChange(fieldName,fieldType)
+                  }
+                }
                 fields={this.props.fields}
               />
             </EuiFormRow>

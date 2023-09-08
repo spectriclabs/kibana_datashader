@@ -88,6 +88,7 @@ export type DataShaderSourceDescriptor = AbstractESSourceDescriptor & {
   attributionUrl: string;
   indexPatternId: string;
   geoField: string;
+  geoType: string;
   applyGlobalQuery: boolean;
   applyGlobalTime: boolean;
 } & DatashaderStylePropertiesDescriptor;
@@ -97,6 +98,7 @@ export interface DatashaderSourceConfig {
   indexPatternId: string;
   timeFieldName: string;
   geoField: string;
+  geoType: string;
   applyGlobalQuery: boolean;
   applyGlobalTime: boolean;
 }
@@ -146,6 +148,7 @@ export class DataShaderSource implements IDataShaderSource {
       type: DataShaderSource.type,
       indexPatternId: settings.indexPatternId,
       geoField: settings.geoField,
+      geoType: settings.geoType,
       applyGlobalQuery: settings.applyGlobalQuery || true,
       applyGlobalTime: settings.applyGlobalTime || true,
       ...defaultStyle,
@@ -541,7 +544,7 @@ export class DataShaderSource implements IDataShaderSource {
       '&bucket_min=',
       bucket_min,
       '&bucket_max=',
-      bucket_max
+      bucket_max,
     );
 
     if (
@@ -615,7 +618,7 @@ export class DataShaderSource implements IDataShaderSource {
   }
   async getUrlTemplate(dataFilters: DataRequestMeta): Promise<string> {
     try {
-      const data = { ...dataFilters, ...this._descriptor };
+      const data:DataRequestMeta&DataShaderSourceDescriptor = { ...dataFilters, ...this._descriptor };
       const urlCheck = new URL(this._descriptor.urlTemplate);
       if (urlCheck.origin === 'null') {
         return NOT_SETUP; // Must return a url to an image or it throws errors so we return a 256x256 blank data uri
@@ -626,7 +629,6 @@ export class DataShaderSource implements IDataShaderSource {
       const dataUrl: string = _.get(data, 'urlTemplate', '');
       const applyGlobalQuery: boolean = _.get(data, 'applyGlobalQuery', true);
       const applyGlobalTime: boolean = _.get(data, 'applyGlobalTime', true);
-
       if (indexTitle.length === 0) {
         return NOT_SETUP;
       }
@@ -708,6 +710,8 @@ export class DataShaderSource implements IDataShaderSource {
           timeFieldName,
           '&geopoint_field=',
           geoField,
+          '&geofield_type=',
+          data.geoType,
           this.getStyleUrlParams(data)
         );
       }
