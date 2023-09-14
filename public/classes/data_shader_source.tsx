@@ -81,6 +81,7 @@ function parseUrl(url: string) {
 }
 
 export type DataShaderSourceDescriptor = AbstractESSourceDescriptor & {
+  name:string;
   urlTemplate: string;
   indexTitle: string;
   timeFieldName: string;
@@ -98,7 +99,7 @@ export interface DatashaderSourceConfig {
   indexPatternId: string;
   timeFieldName: string;
   geoField: string;
-  geoType: string;
+  geoType?: string;
   applyGlobalQuery: boolean;
   applyGlobalTime: boolean;
 }
@@ -146,6 +147,7 @@ export class DataShaderSource implements IDataShaderSource {
       indexTitle: settings.indexTitle,
       timeFieldName: settings.timeFieldName,
       type: DataShaderSource.type,
+      name:"Datashader",
       indexPatternId: settings.indexPatternId,
       geoField: settings.geoField,
       geoType: settings.geoType,
@@ -239,7 +241,7 @@ export class DataShaderSource implements IDataShaderSource {
   }
 
   async getDisplayName(): Promise<string> {
-    return '';
+    return this._descriptor.name;
   }
 
   getAttributionProvider(): (() => Promise<Attribution[]>) | null {
