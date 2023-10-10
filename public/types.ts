@@ -10,10 +10,11 @@ import type { UnifiedSearchPublicPluginStart } from '@kbn/unified-search-plugin/
 import { accsPluginSetup } from '@kbn/accs_plugin/public/types';
 
 export interface MapsCustomRasterSourcePluginSetup {
-  maps: MapsPluginSetup;}
+  accsPlugin:accsPluginSetup;
+  maps: MapsPluginSetup;
+}
 export interface MapsCustomRasterSourcePluginStart {
   maps: MapsPluginStart;
   data: DataPublicPluginStart;
   unifiedSearch: UnifiedSearchPublicPluginStart;
-  accsPlugin:accsPluginSetup;
 }
