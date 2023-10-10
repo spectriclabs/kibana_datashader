@@ -191,9 +191,14 @@ export class DataShaderSource implements IDataShaderSource {
     }
     const unhashedParams = ['zoom', 'extent'];
     try {
-      const pastParams = parseUrl(mbSource.tiles[0]).params;
+      const pastURL = parseUrl(mbSource.tiles[0]);
+      const pastParams = pastURL.params;
       pastParams.params = JSON.parse(pastParams.params);
-      const newParams = parseUrl(sourceData.url).params;
+      const newURL = parseUrl(sourceData.url);
+      if(newURL.path !== pastURL.path){
+        return true; // the index pattern is different and we need to refresh.
+      }
+      const newParams = newURL.params;
       newParams.params = JSON.parse(newParams.params);
       unhashedParams.forEach((p) => {
         delete pastParams.params[p];
