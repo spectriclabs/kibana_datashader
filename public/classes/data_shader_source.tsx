@@ -52,7 +52,7 @@ import {
   DatashaderStylePropertiesDescriptor,
   DATASHADER_STYLES,
 } from './ui/datashader_style';
-import { getIndexPatternService } from '../kibana_services';
+import { getIndexPatterns, getIndexPatternService } from '../kibana_services';
 import { AbstractField } from './fields/field';
 import { DatashaderLegend } from './ui/datashader_legend';
 const NUMBER_DATA_TYPES = ['number'];
@@ -717,8 +717,8 @@ export class DataShaderSource implements IDataShaderSource {
           this.getStyleUrlParams(data)
         );
       }
-
-      const url = dataUrl.concat('/tms/', indexTitle, '/{z}/{x}/{y}.png?', currentParams);
+      const indexPattern = getIndexPatterns(indexTitle)
+      const url = dataUrl.concat('/tms/', indexPattern, '/{z}/{x}/{y}.png?', currentParams);
       return url;
     } catch (error) {
       // eslint-disable-next-line no-console

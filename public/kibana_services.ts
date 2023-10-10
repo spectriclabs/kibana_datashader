@@ -20,3 +20,5 @@ export const getToasts = () => coreStart.notifications.toasts;
 export const getHttp = () => coreStart.http;
 export const getIndexPatternSelectComponent = () =>
   pluginsStart.unifiedSearch.ui.IndexPatternSelect;
+
+export const getIndexPatterns = (index:string)=> pluginsStart.accsPlugin.getIndexPatterns? pluginsStart.accsPlugin.getIndexPatterns(index): index

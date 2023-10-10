@@ -57,6 +57,7 @@ export class MapsCustomRasterSourcePlugin
         return () => {};
       },
     });
+
   }
 
   public start(core: CoreStart, plugins: MapsCustomRasterSourcePluginStart): void {
