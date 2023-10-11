@@ -27,4 +27,4 @@ export const getHttp = () => coreStart.http;
 export const getIndexPatternSelectComponent = () =>
   pluginsStart.unifiedSearch.ui.IndexPatternSelect;
 
-export const getIndexPatterns = (index:string)=> accsPlugin.getIndexPatterns? accsPlugin.getIndexPatterns(index): index
+export const getIndexPatterns = (index:string)=> accsPlugin?.getIndexPatterns ? accsPlugin.getIndexPatterns(index): index
