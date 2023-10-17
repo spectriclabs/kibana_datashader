@@ -16,7 +16,7 @@ import { MapsCustomRasterSourcePluginSetup, MapsCustomRasterSourcePluginStart } 
 import { DataShaderSource } from './classes/data_shader_source';
 import { customRasterLayerWizard } from './classes/custom_raster_layer_wizard';
 import { PLUGIN_ID, PLUGIN_NAME } from '../common';
-import { setStartServices, setConfig } from './kibana_services';
+import { setStartServices, setConfig, setAccsServices } from './kibana_services';
 import type { DataShaderConfig } from '../config';
 
 export class MapsCustomRasterSourcePlugin
@@ -30,7 +30,7 @@ export class MapsCustomRasterSourcePlugin
 
   public setup(
     core: CoreSetup<MapsCustomRasterSourcePluginStart>,
-    { maps: mapsSetup }: MapsCustomRasterSourcePluginSetup
+    { maps: mapsSetup,accsPlugin }: MapsCustomRasterSourcePluginSetup
   ) {
     // Register the Custom raster layer wizard with the Maps application
     mapsSetup.registerSource({
@@ -57,6 +57,7 @@ export class MapsCustomRasterSourcePlugin
         return () => {};
       },
     });
+    setAccsServices(accsPlugin);
   }
 
   public start(core: CoreStart, plugins: MapsCustomRasterSourcePluginStart): void {

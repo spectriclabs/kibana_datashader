@@ -52,7 +52,7 @@ import {
   DatashaderStylePropertiesDescriptor,
   DATASHADER_STYLES,
 } from './ui/datashader_style';
-import { getIndexPatternService } from '../kibana_services';
+import { getIndexPatterns, getIndexPatternService } from '../kibana_services';
 import { AbstractField } from './fields/field';
 import { DatashaderLegend } from './ui/datashader_legend';
 const NUMBER_DATA_TYPES = ['number'];
@@ -191,9 +191,14 @@ export class DataShaderSource implements IDataShaderSource {
     }
     const unhashedParams = ['zoom', 'extent'];
     try {
-      const pastParams = parseUrl(mbSource.tiles[0]).params;
+      const pastURL = parseUrl(mbSource.tiles[0]);
+      const pastParams = pastURL.params;
       pastParams.params = JSON.parse(pastParams.params);
-      const newParams = parseUrl(sourceData.url).params;
+      const newURL = parseUrl(sourceData.url);
+      if(newURL.path !== pastURL.path){
+        return true; // the index pattern is different and we need to refresh.
+      }
+      const newParams = newURL.params;
       newParams.params = JSON.parse(newParams.params);
       unhashedParams.forEach((p) => {
         delete pastParams.params[p];
@@ -717,8 +722,8 @@ export class DataShaderSource implements IDataShaderSource {
           this.getStyleUrlParams(data)
         );
       }
-
-      const url = dataUrl.concat('/tms/', indexTitle, '/{z}/{x}/{y}.png?', currentParams);
+      const indexPattern = getIndexPatterns(indexTitle)
+      const url = dataUrl.concat('/tms/', indexPattern, '/{z}/{x}/{y}.png?', currentParams);
       return url;
     } catch (error) {
       // eslint-disable-next-line no-console

@@ -11,5 +11,5 @@
   "server": true,
   "ui": true,
   "requiredPlugins": ["unifiedSearch","navigation", "data", "maps",  "kibanaReact"],
-  "optionalPlugins": ["kibanaUtils", "kibanaReact"]
+  "optionalPlugins": ["kibanaUtils", "kibanaReact","accsPlugin"]
 }

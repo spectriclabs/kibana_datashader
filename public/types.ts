@@ -7,7 +7,10 @@
 import { MapsPluginSetup, MapsPluginStart } from '@kbn/maps-plugin/public/plugin';
 import type { DataPublicPluginStart } from '@kbn/data-plugin/public';
 import type { UnifiedSearchPublicPluginStart } from '@kbn/unified-search-plugin/public';
+import { accsPluginSetup } from '@kbn/accs_plugin/public/types';
+
 export interface MapsCustomRasterSourcePluginSetup {
+  accsPlugin:accsPluginSetup;
   maps: MapsPluginSetup;
 }
 export interface MapsCustomRasterSourcePluginStart {
