@@ -661,7 +661,10 @@ export class DataShaderSource implements IDataShaderSource {
         if (applyGlobalTime) {
           currentParamsObj.timeFilters = dataMeta.timeFilters;
         }
-
+        //Timeslider is in use and should override the time filters
+        if(dataMeta.timeslice){
+          currentParamsObj.timeFilters = {to:(new Date(dataMeta.timeslice.to)).toISOString(),from:(new Date(dataMeta.timeslice.from)).toISOString()};
+        }
         currentParamsObj.filters = [];
 
         if (applyGlobalQuery) {
