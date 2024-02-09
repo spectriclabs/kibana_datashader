@@ -3,8 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "yarn plugin-helpers build",
+    "build": "git log --format=\"export const version='%h %b'\" -n 1 >./common/version.ts;yarn plugin-helpers build",
     "plugin-helpers": "node ../../scripts/plugin_helpers",
+    "dev": "yarn plugin-helpers dev",
     "kbn": "node ../../scripts/kbn"
   }
 }
