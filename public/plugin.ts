@@ -43,7 +43,9 @@ export class MapsCustomRasterSourcePlugin
     core.application.register({
       id: PLUGIN_ID,
       title: PLUGIN_NAME,
-      navLinkStatus: AppNavLinkStatus.hidden,
+      //@ts-ignore Deprecated in but still required in older versions. remove when we no longer support 8.15
+      navLinkStatus: "hidden",
+      visibleIn: [],
       mount: ({ history }) => {
         (async () => {
           const [coreStart] = await core.getStartServices();

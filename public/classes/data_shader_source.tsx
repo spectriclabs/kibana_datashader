@@ -19,7 +19,6 @@ import type {
   VectorSourceRequestMeta,
 } from '@kbn/maps-plugin/common/descriptor_types';
 
-import { PreIndexedShape } from '@kbn/maps-plugin/common/elasticsearch_util';
 import type {
   BoundsRequestMeta,
   DataRequest,
@@ -238,9 +237,7 @@ export class DataShaderSource implements IDataShaderSource {
   async getImmutableProperties(): Promise<ImmutableSourceProperty[]> {
     return [];
   }
-  async getPreIndexedShape(properties: any): Promise<PreIndexedShape | null> {
-    return null;
-  }
+
   getType(): string {
     return this._descriptor.type;
   }
@@ -376,8 +373,7 @@ export class DataShaderSource implements IDataShaderSource {
   }
 
   async addFeature(
-    geometry: Geometry | Position[],
-    defaultFields: Record<string, Record<string, string>>
+    geometry: Geometry | Position[]
   ) {
     throw new Error('Should implement VectorSource#addFeature');
   }
@@ -521,6 +517,9 @@ export class DataShaderSource implements IDataShaderSource {
     return MAX_ZOOM;
   }
 
+  supportsJoins(): boolean{
+    return false
+  }
   async getLicensedFeatures(): Promise<[]> {
     return [];
   }
