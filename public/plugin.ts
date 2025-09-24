@@ -6,7 +6,6 @@
  */
 
 import {
-  AppNavLinkStatus,
   CoreSetup,
   CoreStart,
   Plugin,
@@ -43,7 +42,7 @@ export class MapsCustomRasterSourcePlugin
     core.application.register({
       id: PLUGIN_ID,
       title: PLUGIN_NAME,
-      navLinkStatus: AppNavLinkStatus.hidden,
+      visibleIn: [],
       mount: ({ history }) => {
         (async () => {
           const [coreStart] = await core.getStartServices();
