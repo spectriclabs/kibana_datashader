@@ -12,15 +12,17 @@ import { v4 as uuid } from 'uuid';
 import type {
   AbstractESSourceDescriptor,
   Attribution,
+  DataRequestDescriptor,
   DataRequestMeta,
+  DynamicStylePropertyOptions,
   MapExtent,
+  StyleMetaData,
   Timeslice,
   TooltipFeatureAction,
   VectorSourceRequestMeta,
 } from '@kbn/maps-plugin/common/descriptor_types';
 
-import { PreIndexedShape } from '@kbn/maps-plugin/common/elasticsearch_util';
-import type {
+import {
   BoundsRequestMeta,
   DataRequest,
   GeoJsonWithMeta,
@@ -38,7 +40,7 @@ import type {
 // import { XYZTMSSource } from '../../../../x-pack/plugins/maps/public/classes/sources/xyz_tms_source';
 import React from 'react';
 import { DataViewField, DataView } from '@kbn/data-views-plugin/common';
-import { fromKueryExpression, luceneStringToDsl, toElasticsearchQuery } from '@kbn/es-query';
+import { fromKueryExpression, luceneStringToDsl, Query, TimeRange, toElasticsearchQuery } from '@kbn/es-query';
 // import { ESDocField } from '@kbn/maps-plugin/public/classes/fields/es_doc_field';
 import { i18n } from '@kbn/i18n';
 import { FieldFormat } from '@kbn/field-formats-plugin/common';
@@ -58,6 +60,11 @@ import { DatashaderLegend } from './ui/datashader_legend';
 const NUMBER_DATA_TYPES = ['number'];
 export const CATEGORICAL_DATA_TYPES = ['string', 'ip', 'boolean'];
 import { DATASHADER_BUCKET_SELECT } from './ui/datashader_legend';
+import { IVectorStyle } from '@kbn/maps-plugin/public/classes/styles/vector/vector_style';
+import { IESSource } from '@kbn/maps-plugin/public/classes/sources/es_source';
+import { KibanaExecutionContext } from '@kbn/core/public';
+import { IDynamicStyleProperty } from '@kbn/maps-plugin/public/classes/styles/vector/properties/dynamic_style_property';
+import { SearchResponseWarning } from '@kbn/search-response-warnings';
 
 const urlRe = /^(\w+):\/\/([^/?]*)(\/[^?]+)?\??(.+)?/;
 
@@ -81,7 +88,7 @@ function parseUrl(url: string) {
 }
 
 export type DataShaderSourceDescriptor = AbstractESSourceDescriptor & {
-  name:string;
+  name: string;
   urlTemplate: string;
   indexTitle: string;
   timeFieldName: string;
@@ -132,10 +139,11 @@ export interface IDataShaderSource extends IVectorSource {
   getMap(): any | undefined;
 }
 
-export class DataShaderSource implements IDataShaderSource {
+export class DataShaderSource implements IDataShaderSource, IESSource {
   static type = 'DATA_SHADER';
 
   readonly _descriptor: DataShaderSourceDescriptor;
+  _requestMeta: DataRequestMeta | undefined;
   indexPattern: any;
   _previousSource: any;
 
@@ -147,7 +155,7 @@ export class DataShaderSource implements IDataShaderSource {
       indexTitle: settings.indexTitle,
       timeFieldName: settings.timeFieldName,
       type: DataShaderSource.type,
-      name:"Datashader",
+      name: "Datashader",
       indexPatternId: settings.indexPatternId,
       geoField: settings.geoField,
       geoType: settings.geoType,
@@ -160,24 +168,76 @@ export class DataShaderSource implements IDataShaderSource {
   constructor(sourceDescriptor: DataShaderSourceDescriptor) {
     this._descriptor = sourceDescriptor;
   }
+
+  async loadStylePropsMeta({ layerName, style, dynamicStyleProps, registerCancelCallback, sourceQuery, timeFilters, searchSessionId, inspectorAdapters, executionContext, }:
+    {
+      layerName: string;
+      style: IVectorStyle;
+      dynamicStyleProps: Array<IDynamicStyleProperty<DynamicStylePropertyOptions>>;
+      registerCancelCallback: (callback: () => void) => void;
+      sourceQuery?: Query;
+      timeFilters: TimeRange;
+      searchSessionId?: string;
+      inspectorAdapters: Adapters;
+      executionContext: KibanaExecutionContext;
+    }): Promise<{ styleMeta: StyleMetaData; warnings: SearchResponseWarning[]; }> {
+    // I think this is intended to be where the requests to the backend are called to gather the dictionary or ranges instead of within the legend object.
+    // I also do not see where to acquire the query and filter information outside of this
+    
+    this._requestMeta = {
+      timeFilters: timeFilters,
+      sourceQuery: sourceQuery,
+    };
+    console.log("Loading styleProps.", timeFilters, sourceQuery)
+    const categoryField = this._descriptor.categoryField;
+    const styleMap: { [key: string]: any } = {};
+    const styleMeta: StyleMetaData = { categoryField: { min: 0, max: 1, avg: 0.5, std_deviation: 1 } };
+    styleMap[categoryField] = styleMeta;
+    return { styleMeta: styleMeta, warnings: [] };
+  }
+
+  getId() {
+    return this._descriptor.id;
+  }
+
   getMap() {
     return this.map;
   }
+
   async hasLegendDetails(): Promise<boolean> {
     return true;
   }
 
-  renderLegendDetails(dataRequest: DataRequest): ReactElement<any> | null {
-    if (!dataRequest) {
-      return null;
-    }
+  supportsJoins() {
+    return false
+  }
+
+  getInspectorRequestIds() {
+    return []
+  }
+
+  // renderLegendDetails(dataRequest: DataRequest): ReactElement<any> | null {
+  renderLegendDetails(vectorStyle: IVectorStyle): ReactElement<any> | null {
+    const dataRequestDescriptor: DataRequestDescriptor = {
+      dataId: this._descriptor.id,
+      data: {
+        geoField: this._descriptor.geoField,
+        timeFieldName: this._descriptor.timeFieldName,
+        applyGlobalQuery: this._descriptor.applyGlobalQuery,
+        applyGlobalTime: this._descriptor.applyGlobalTime
+      },
+      dataRequestMeta: {...this._requestMeta}
+    };
+    console.log("Attempting to render own legend.", dataRequestDescriptor)
+
+
     return (
       <DatashaderLegend
         sourceDescriptorUrlTemplate={this._descriptor.urlTemplate}
         sourceDescriptorIndexTitle={this._descriptor.indexTitle}
         styleDescriptorCategoryField={this._descriptor.categoryField}
         style={this}
-        sourceDataRequest={dataRequest}
+        sourceDataRequest={dataRequestDescriptor}
       />
     );
   }
@@ -195,7 +255,7 @@ export class DataShaderSource implements IDataShaderSource {
       const pastParams = pastURL.params;
       pastParams.params = JSON.parse(pastParams.params);
       const newURL = parseUrl(sourceData.url);
-      if(newURL.path !== pastURL.path){
+      if (newURL.path !== pastURL.path) {
         return true; // the index pattern is different and we need to refresh.
       }
       const newParams = newURL.params;
@@ -238,9 +298,7 @@ export class DataShaderSource implements IDataShaderSource {
   async getImmutableProperties(): Promise<ImmutableSourceProperty[]> {
     return [];
   }
-  async getPreIndexedShape(properties: any): Promise<PreIndexedShape | null> {
-    return null;
-  }
+
   getType(): string {
     return this._descriptor.type;
   }
@@ -376,8 +434,7 @@ export class DataShaderSource implements IDataShaderSource {
   }
 
   async addFeature(
-    geometry: Geometry | Position[],
-    defaultFields: Record<string, Record<string, string>>
+    geometry: Geometry | Position[], label?: string
   ) {
     throw new Error('Should implement VectorSource#addFeature');
   }
@@ -444,6 +501,9 @@ export class DataShaderSource implements IDataShaderSource {
       return [];
     }
   }
+  getIndexPatternId(): string {
+    return this._descriptor.indexPatternId;
+  }
 
   getIndexPatternIds(): string[] {
     return [this._descriptor.indexPatternId];
@@ -459,7 +519,7 @@ export class DataShaderSource implements IDataShaderSource {
     } catch (error) {
       throw new Error(
         i18n.translate('xpack.maps.source.esSource.noIndexPatternErrorMessage', {
-          defaultMessage: `Unable to find Index pattern for id: {indexPatternId}`,
+          defaultMessage: `Unable to find Index pattern for id: ${this._descriptor.indexPatternId}`,
           values: { indexPatternId: this._descriptor.indexPatternId },
         })
       );
@@ -625,7 +685,7 @@ export class DataShaderSource implements IDataShaderSource {
   }
   async getUrlTemplate(dataFilters: DataRequestMeta): Promise<string> {
     try {
-      const data:DataRequestMeta&DataShaderSourceDescriptor = { ...dataFilters, ...this._descriptor };
+      const data: DataRequestMeta & DataShaderSourceDescriptor = { ...dataFilters, ...this._descriptor };
       const urlCheck = new URL(this._descriptor.urlTemplate);
       if (urlCheck.origin === 'null') {
         return NOT_SETUP; // Must return a url to an image or it throws errors so we return a 256x256 blank data uri
@@ -662,8 +722,8 @@ export class DataShaderSource implements IDataShaderSource {
           currentParamsObj.timeFilters = dataMeta.timeFilters;
         }
         //Timeslider is in use and should override the time filters
-        if(dataMeta.timeslice){
-          currentParamsObj.timeFilters = {to:(new Date(dataMeta.timeslice.to)).toISOString(),from:(new Date(dataMeta.timeslice.from)).toISOString()};
+        if (dataMeta.timeslice) {
+          currentParamsObj.timeFilters = { to: (new Date(dataMeta.timeslice.to)).toISOString(), from: (new Date(dataMeta.timeslice.from)).toISOString() };
         }
         currentParamsObj.filters = [];
 

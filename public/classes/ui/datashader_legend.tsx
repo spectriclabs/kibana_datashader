@@ -8,15 +8,14 @@ import React from 'react';
 import fetch from 'node-fetch';
 import _ from 'lodash';
 import { fromKueryExpression, luceneStringToDsl, toElasticsearchQuery } from '@kbn/es-query';
-import type { DataRequest } from '@kbn/maps-plugin/public';
 import { EuiFlexGroup, EuiFlexItem, EuiSpacer, EuiText, EuiToolTip } from '@elastic/eui';
 import { DataShaderSourceDescriptor, IDataShaderSource } from '../data_shader_source';
 import { ValidatedRange } from './validated_range';
-import { DataRequestMeta } from '@kbn/maps-plugin/common/descriptor_types';
+import { DataRequestDescriptor, DataRequestMeta } from '@kbn/maps-plugin/common/descriptor_types';
 import { DatashaderStylePropertiesDescriptor } from './datashader_style';
 export const DATASHADER_BUCKET_SELECT: any = {};
 interface Props {
-  sourceDataRequest?: DataRequest;
+  sourceDataRequest?: DataRequestDescriptor;
   sourceDescriptorUrlTemplate: string;
   sourceDescriptorIndexTitle: string;
   styleDescriptorCategoryField: string;
@@ -97,8 +96,8 @@ export class DatashaderLegend extends React.Component<Props, State> {
     }
 
     const data  = {
-      ...this.props.sourceDataRequest?.getData(),
-      ...this.props.sourceDataRequest?.getMeta(),
+      ...this.props.sourceDataRequest?.data,
+      ...this.props.sourceDataRequest?.dataRequestMeta,
       ...this.props.style.cloneDescriptor(),
     } as unknown as DataShaderSourceDescriptor&DatashaderStylePropertiesDescriptor;
 
@@ -119,7 +118,7 @@ export class DatashaderLegend extends React.Component<Props, State> {
       return;
     }
 
-    const dataMeta = this.props.sourceDataRequest.getMeta();
+    const dataMeta = this.props.sourceDataRequest.dataRequestMeta;
 
     // if we don't have dataMeta we cannot request a legend
     if (!dataMeta) {
