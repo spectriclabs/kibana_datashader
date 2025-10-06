@@ -214,6 +214,9 @@ export class DataShaderSource implements IDataShaderSource {
   }
 
   renderLegendDetails(dataRequest: DataRequest): ReactElement<any> | null {
+    if (!dataRequest) {
+      return null;
+    }
     return (
       <DatashaderLegend
         sourceDescriptorUrlTemplate={this._descriptor.urlTemplate}
