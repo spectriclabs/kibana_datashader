@@ -8,11 +8,12 @@ import React from 'react';
 import fetch from 'node-fetch';
 import _ from 'lodash';
 import { fromKueryExpression, luceneStringToDsl, toElasticsearchQuery } from '@kbn/es-query';
+import type { DataRequest } from '@kbn/maps-plugin/public';
 import { EuiFlexGroup, EuiFlexItem, EuiSpacer, EuiText, EuiToolTip } from '@elastic/eui';
 import { DataShaderSourceDescriptor, IDataShaderSource } from '../data_shader_source';
 import { ValidatedRange } from './validated_range';
+import { DataRequestMeta } from '@kbn/maps-plugin/common/descriptor_types';
 import { DatashaderStylePropertiesDescriptor } from './datashader_style';
-import { DataRequest } from '@kbn/maps-plugin/public';
 export const DATASHADER_BUCKET_SELECT: any = {};
 interface Props {
   sourceDataRequest?: DataRequest;
