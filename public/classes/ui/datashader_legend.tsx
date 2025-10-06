@@ -11,11 +11,11 @@ import { fromKueryExpression, luceneStringToDsl, toElasticsearchQuery } from '@k
 import { EuiFlexGroup, EuiFlexItem, EuiSpacer, EuiText, EuiToolTip } from '@elastic/eui';
 import { DataShaderSourceDescriptor, IDataShaderSource } from '../data_shader_source';
 import { ValidatedRange } from './validated_range';
-import { DataRequestDescriptor, DataRequestMeta } from '@kbn/maps-plugin/common/descriptor_types';
 import { DatashaderStylePropertiesDescriptor } from './datashader_style';
+import { DataRequest } from '@kbn/maps-plugin/public';
 export const DATASHADER_BUCKET_SELECT: any = {};
 interface Props {
-  sourceDataRequest?: DataRequestDescriptor;
+  sourceDataRequest?: DataRequest;
   sourceDescriptorUrlTemplate: string;
   sourceDescriptorIndexTitle: string;
   styleDescriptorCategoryField: string;
@@ -96,8 +96,8 @@ export class DatashaderLegend extends React.Component<Props, State> {
     }
 
     const data  = {
-      ...this.props.sourceDataRequest?.data,
-      ...this.props.sourceDataRequest?.dataRequestMeta,
+      ...this.props.sourceDataRequest?.getData(),
+      ...this.props.sourceDataRequest?.getMeta(),
       ...this.props.style.cloneDescriptor(),
     } as unknown as DataShaderSourceDescriptor&DatashaderStylePropertiesDescriptor;
 
@@ -118,7 +118,7 @@ export class DatashaderLegend extends React.Component<Props, State> {
       return;
     }
 
-    const dataMeta = this.props.sourceDataRequest.dataRequestMeta;
+    const dataMeta = this.props.sourceDataRequest.getMeta();
 
     // if we don't have dataMeta we cannot request a legend
     if (!dataMeta) {

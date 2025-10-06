@@ -12,7 +12,6 @@ import { v4 as uuid } from 'uuid';
 import type {
   AbstractESSourceDescriptor,
   Attribution,
-  DataRequestDescriptor,
   DataRequestMeta,
   DynamicStylePropertyOptions,
   MapExtent,
@@ -22,15 +21,15 @@ import type {
   VectorSourceRequestMeta,
 } from '@kbn/maps-plugin/common/descriptor_types';
 
-import {
+import type {
   BoundsRequestMeta,
   DataRequest,
   GeoJsonWithMeta,
   GetFeatureActionsArgs,
   IField,
   ImmutableSourceProperty,
+  IRasterSource,
   ITooltipProperty,
-  IVectorSource,
   SourceEditorArgs,
   SourceStatus,
 } from '@kbn/maps-plugin/public';
@@ -61,7 +60,6 @@ const NUMBER_DATA_TYPES = ['number'];
 export const CATEGORICAL_DATA_TYPES = ['string', 'ip', 'boolean'];
 import { DATASHADER_BUCKET_SELECT } from './ui/datashader_legend';
 import { IVectorStyle } from '@kbn/maps-plugin/public/classes/styles/vector/vector_style';
-import { IESSource } from '@kbn/maps-plugin/public/classes/sources/es_source';
 import { KibanaExecutionContext } from '@kbn/core/public';
 import { IDynamicStyleProperty } from '@kbn/maps-plugin/public/classes/styles/vector/properties/dynamic_style_property';
 import { SearchResponseWarning } from '@kbn/search-response-warnings';
@@ -133,13 +131,13 @@ const defaultStyle = {
   [DATASHADER_STYLES.ELLIPSE_THICKNESS]: 0,
   [DATASHADER_STYLES.MANUAL_RESOLUTION]: false,
 } as DatashaderStylePropertiesDescriptor;
-export interface IDataShaderSource extends IVectorSource {
+export interface IDataShaderSource extends IRasterSource {
   getIndexPattern(): Promise<DataView>;
   getStyleUrlParams(data: DatashaderStylePropertiesDescriptor): string;
   getMap(): any | undefined;
 }
 
-export class DataShaderSource implements IDataShaderSource, IESSource {
+export class DataShaderSource implements IDataShaderSource {
   static type = 'DATA_SHADER';
 
   readonly _descriptor: DataShaderSourceDescriptor;
@@ -188,7 +186,6 @@ export class DataShaderSource implements IDataShaderSource, IESSource {
       timeFilters: timeFilters,
       sourceQuery: sourceQuery,
     };
-    console.log("Loading styleProps.", timeFilters, sourceQuery)
     const categoryField = this._descriptor.categoryField;
     const styleMap: { [key: string]: any } = {};
     const styleMeta: StyleMetaData = { categoryField: { min: 0, max: 1, avg: 0.5, std_deviation: 1 } };
@@ -216,28 +213,14 @@ export class DataShaderSource implements IDataShaderSource, IESSource {
     return []
   }
 
-  // renderLegendDetails(dataRequest: DataRequest): ReactElement<any> | null {
-  renderLegendDetails(vectorStyle: IVectorStyle): ReactElement<any> | null {
-    const dataRequestDescriptor: DataRequestDescriptor = {
-      dataId: this._descriptor.id,
-      data: {
-        geoField: this._descriptor.geoField,
-        timeFieldName: this._descriptor.timeFieldName,
-        applyGlobalQuery: this._descriptor.applyGlobalQuery,
-        applyGlobalTime: this._descriptor.applyGlobalTime
-      },
-      dataRequestMeta: {...this._requestMeta}
-    };
-    console.log("Attempting to render own legend.", dataRequestDescriptor)
-
-
+  renderLegendDetails(dataRequest: DataRequest): ReactElement<any> | null {
     return (
       <DatashaderLegend
         sourceDescriptorUrlTemplate={this._descriptor.urlTemplate}
         sourceDescriptorIndexTitle={this._descriptor.indexTitle}
         styleDescriptorCategoryField={this._descriptor.categoryField}
         style={this}
-        sourceDataRequest={dataRequestDescriptor}
+        sourceDataRequest={dataRequest}
       />
     );
   }
@@ -367,10 +350,6 @@ export class DataShaderSource implements IDataShaderSource, IESSource {
     return false;
   }
 
-  getFieldByName(fieldName: string): IField | null {
-    return this.createField({ fieldName });
-  }
-
   isBoundsAware(): boolean {
     return false;
   }
@@ -434,7 +413,7 @@ export class DataShaderSource implements IDataShaderSource, IESSource {
   }
 
   async addFeature(
-    geometry: Geometry | Position[], label?: string
+    geometry: Geometry | Position[]
   ) {
     throw new Error('Should implement VectorSource#addFeature');
   }
@@ -452,13 +431,6 @@ export class DataShaderSource implements IDataShaderSource, IESSource {
   getFeatureActions(args: GetFeatureActionsArgs): TooltipFeatureAction[] {
     // Its not possible to filter by geometry for vector tile sources since there is no way to get original geometry
     return [];
-  }
-  createField({ fieldName }: { fieldName: string }): AbstractField {
-    return new AbstractField({
-      fieldName,
-      source: this,
-      origin: FIELD_ORIGIN.SOURCE,
-    });
   }
 
   async getCategoricalFields(): Promise<Array<{ field: DataViewField; format: FieldFormat }>> {
