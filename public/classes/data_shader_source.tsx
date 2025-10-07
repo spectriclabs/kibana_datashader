@@ -13,7 +13,9 @@ import type {
   AbstractESSourceDescriptor,
   Attribution,
   DataRequestMeta,
+  DynamicStylePropertyOptions,
   MapExtent,
+  StyleMetaData,
   Timeslice,
   TooltipFeatureAction,
   VectorSourceRequestMeta,
@@ -26,8 +28,8 @@ import type {
   GetFeatureActionsArgs,
   IField,
   ImmutableSourceProperty,
+  IRasterSource,
   ITooltipProperty,
-  IVectorSource,
   SourceEditorArgs,
   SourceStatus,
 } from '@kbn/maps-plugin/public';
@@ -37,7 +39,7 @@ import type {
 // import { XYZTMSSource } from '../../../../x-pack/plugins/maps/public/classes/sources/xyz_tms_source';
 import React from 'react';
 import { DataViewField, DataView } from '@kbn/data-views-plugin/common';
-import { fromKueryExpression, luceneStringToDsl, toElasticsearchQuery } from '@kbn/es-query';
+import { fromKueryExpression, luceneStringToDsl, Query, TimeRange, toElasticsearchQuery } from '@kbn/es-query';
 // import { ESDocField } from '@kbn/maps-plugin/public/classes/fields/es_doc_field';
 import { i18n } from '@kbn/i18n';
 import { FieldFormat } from '@kbn/field-formats-plugin/common';
@@ -57,6 +59,10 @@ import { DatashaderLegend } from './ui/datashader_legend';
 const NUMBER_DATA_TYPES = ['number'];
 export const CATEGORICAL_DATA_TYPES = ['string', 'ip', 'boolean'];
 import { DATASHADER_BUCKET_SELECT } from './ui/datashader_legend';
+import { IVectorStyle } from '@kbn/maps-plugin/public/classes/styles/vector/vector_style';
+import { KibanaExecutionContext } from '@kbn/core/public';
+import { IDynamicStyleProperty } from '@kbn/maps-plugin/public/classes/styles/vector/properties/dynamic_style_property';
+import { SearchResponseWarning } from '@kbn/search-response-warnings';
 
 const urlRe = /^(\w+):\/\/([^/?]*)(\/[^?]+)?\??(.+)?/;
 
@@ -80,7 +86,7 @@ function parseUrl(url: string) {
 }
 
 export type DataShaderSourceDescriptor = AbstractESSourceDescriptor & {
-  name:string;
+  name: string;
   urlTemplate: string;
   indexTitle: string;
   timeFieldName: string;
@@ -125,7 +131,7 @@ const defaultStyle = {
   [DATASHADER_STYLES.ELLIPSE_THICKNESS]: 0,
   [DATASHADER_STYLES.MANUAL_RESOLUTION]: false,
 } as DatashaderStylePropertiesDescriptor;
-export interface IDataShaderSource extends IVectorSource {
+export interface IDataShaderSource extends IRasterSource {
   getIndexPattern(): Promise<DataView>;
   getStyleUrlParams(data: DatashaderStylePropertiesDescriptor): string;
   getMap(): any | undefined;
@@ -135,6 +141,7 @@ export class DataShaderSource implements IDataShaderSource {
   static type = 'DATA_SHADER';
 
   readonly _descriptor: DataShaderSourceDescriptor;
+  _requestMeta: DataRequestMeta | undefined;
   indexPattern: any;
   _previousSource: any;
 
@@ -146,7 +153,7 @@ export class DataShaderSource implements IDataShaderSource {
       indexTitle: settings.indexTitle,
       timeFieldName: settings.timeFieldName,
       type: DataShaderSource.type,
-      name:"Datashader",
+      name: "Datashader",
       indexPatternId: settings.indexPatternId,
       geoField: settings.geoField,
       geoType: settings.geoType,
@@ -159,11 +166,51 @@ export class DataShaderSource implements IDataShaderSource {
   constructor(sourceDescriptor: DataShaderSourceDescriptor) {
     this._descriptor = sourceDescriptor;
   }
+
+  async loadStylePropsMeta({ layerName, style, dynamicStyleProps, registerCancelCallback, sourceQuery, timeFilters, searchSessionId, inspectorAdapters, executionContext, }:
+    {
+      layerName: string;
+      style: IVectorStyle;
+      dynamicStyleProps: Array<IDynamicStyleProperty<DynamicStylePropertyOptions>>;
+      registerCancelCallback: (callback: () => void) => void;
+      sourceQuery?: Query;
+      timeFilters: TimeRange;
+      searchSessionId?: string;
+      inspectorAdapters: Adapters;
+      executionContext: KibanaExecutionContext;
+    }): Promise<{ styleMeta: StyleMetaData; warnings: SearchResponseWarning[]; }> {
+    // I think this is intended to be where the requests to the backend are called to gather the dictionary or ranges instead of within the legend object.
+    // I also do not see where to acquire the query and filter information outside of this
+    
+    this._requestMeta = {
+      timeFilters: timeFilters,
+      sourceQuery: sourceQuery,
+    };
+    const categoryField = this._descriptor.categoryField;
+    const styleMap: { [key: string]: any } = {};
+    const styleMeta: StyleMetaData = { categoryField: { min: 0, max: 1, avg: 0.5, std_deviation: 1 } };
+    styleMap[categoryField] = styleMeta;
+    return { styleMeta: styleMeta, warnings: [] };
+  }
+
+  getId() {
+    return this._descriptor.id;
+  }
+
   getMap() {
     return this.map;
   }
+
   async hasLegendDetails(): Promise<boolean> {
     return true;
+  }
+
+  supportsJoins() {
+    return false
+  }
+
+  getInspectorRequestIds() {
+    return []
   }
 
   renderLegendDetails(dataRequest: DataRequest): ReactElement<any> | null {
@@ -194,7 +241,7 @@ export class DataShaderSource implements IDataShaderSource {
       const pastParams = pastURL.params;
       pastParams.params = JSON.parse(pastParams.params);
       const newURL = parseUrl(sourceData.url);
-      if(newURL.path !== pastURL.path){
+      if (newURL.path !== pastURL.path) {
         return true; // the index pattern is different and we need to refresh.
       }
       const newParams = newURL.params;
@@ -306,10 +353,6 @@ export class DataShaderSource implements IDataShaderSource {
     return false;
   }
 
-  getFieldByName(fieldName: string): IField | null {
-    return this.createField({ fieldName });
-  }
-
   isBoundsAware(): boolean {
     return false;
   }
@@ -392,13 +435,6 @@ export class DataShaderSource implements IDataShaderSource {
     // Its not possible to filter by geometry for vector tile sources since there is no way to get original geometry
     return [];
   }
-  createField({ fieldName }: { fieldName: string }): AbstractField {
-    return new AbstractField({
-      fieldName,
-      source: this,
-      origin: FIELD_ORIGIN.SOURCE,
-    });
-  }
 
   async getCategoricalFields(): Promise<Array<{ field: DataViewField; format: FieldFormat }>> {
     try {
@@ -440,6 +476,9 @@ export class DataShaderSource implements IDataShaderSource {
       return [];
     }
   }
+  getIndexPatternId(): string {
+    return this._descriptor.indexPatternId;
+  }
 
   getIndexPatternIds(): string[] {
     return [this._descriptor.indexPatternId];
@@ -455,7 +494,7 @@ export class DataShaderSource implements IDataShaderSource {
     } catch (error) {
       throw new Error(
         i18n.translate('xpack.maps.source.esSource.noIndexPatternErrorMessage', {
-          defaultMessage: `Unable to find Index pattern for id: {indexPatternId}`,
+          defaultMessage: `Unable to find Index pattern for id: ${this._descriptor.indexPatternId}`,
           values: { indexPatternId: this._descriptor.indexPatternId },
         })
       );
@@ -517,9 +556,6 @@ export class DataShaderSource implements IDataShaderSource {
     return MAX_ZOOM;
   }
 
-  supportsJoins(): boolean{
-    return false
-  }
   async getLicensedFeatures(): Promise<[]> {
     return [];
   }
@@ -624,7 +660,7 @@ export class DataShaderSource implements IDataShaderSource {
   }
   async getUrlTemplate(dataFilters: DataRequestMeta): Promise<string> {
     try {
-      const data:DataRequestMeta&DataShaderSourceDescriptor = { ...dataFilters, ...this._descriptor };
+      const data: DataRequestMeta & DataShaderSourceDescriptor = { ...dataFilters, ...this._descriptor };
       const urlCheck = new URL(this._descriptor.urlTemplate);
       if (urlCheck.origin === 'null') {
         return NOT_SETUP; // Must return a url to an image or it throws errors so we return a 256x256 blank data uri
@@ -661,8 +697,8 @@ export class DataShaderSource implements IDataShaderSource {
           currentParamsObj.timeFilters = dataMeta.timeFilters;
         }
         //Timeslider is in use and should override the time filters
-        if(dataMeta.timeslice){
-          currentParamsObj.timeFilters = {to:(new Date(dataMeta.timeslice.to)).toISOString(),from:(new Date(dataMeta.timeslice.from)).toISOString()};
+        if (dataMeta.timeslice) {
+          currentParamsObj.timeFilters = { to: (new Date(dataMeta.timeslice.to)).toISOString(), from: (new Date(dataMeta.timeslice.from)).toISOString() };
         }
         currentParamsObj.filters = [];
 
